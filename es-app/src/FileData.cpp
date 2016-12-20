@@ -178,3 +178,14 @@ void FileData::sort(const SortType& type)
 {
 	sort(*type.comparisonFunction, type.ascending);
 }
+
+FileData* FileData::getRandom() const
+{
+	std::vector<FileData*> list = getFilesRecursive(GAME);
+	const unsigned long n = list.size();
+
+	//Select random file
+	int k = (int)(((float)rand() / float(RAND_MAX)) * (float)n);
+
+	return list.at(k);
+}

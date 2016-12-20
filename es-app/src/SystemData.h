@@ -64,6 +64,8 @@ public:
 	// Load or re-load theme.
 	void loadTheme();
 
+	SystemData* SystemData::getRandom() const;
+
 private:
 	std::string mName;
 	std::string mFullName;

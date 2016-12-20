@@ -447,3 +447,20 @@ void SystemData::loadTheme()
 		mTheme = std::make_shared<ThemeData>(); // reset to empty
 	}
 }
+
+SystemData* SystemData::getRandom() const
+{
+	std::vector<SystemData*> validSystems;
+	for (auto it = sSystemVector.begin(); it != sSystemVector.end(); it++) {
+		if ((*it)->getGameCount() > 0) {
+			validSystems.push_back(*it);
+		}
+	}
+
+	const unsigned long n = validSystems.size();
+	
+	//Select random system
+	int k = (int)(((float)rand() / float(RAND_MAX)) * (float)n);
+	
+	return validSystems.at(k);
+}

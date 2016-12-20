@@ -12,7 +12,7 @@
 #include "animations/LaunchAnimation.h"
 #include "animations/MoveCameraAnimation.h"
 #include "animations/LambdaAnimation.h"
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 ViewController* ViewController::sInstance = NULL;
 
@@ -117,6 +117,16 @@ void ViewController::goToGameList(SystemData* system)
 		mCurrentView->onShow();
 	}
 	playViewTransition();
+}
+
+void ViewController::goToRandomGame()
+{
+	goToGameList(mState.system->getRandom());
+
+	FileData* selected = mState.system->getRootFolder()->getRandom();
+
+	IGameListView* view = getGameListView(mState.system).get();
+	view->setCursor(selected);
 }
 
 void ViewController::playViewTransition()

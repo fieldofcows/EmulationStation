@@ -4,6 +4,7 @@
 #include "Settings.h"
 #include "SystemData.h"
 #include "Util.h"
+#include "views/ViewController.h"
 
 #define FADE_TIME 			3000
 #define SWAP_VIDEO_TIMEOUT	30000
@@ -57,6 +58,12 @@ void SystemScreenSaver::startScreenSaver()
 			mState = STATE_SCREENSAVER_ACTIVE;
 		}
 	}
+	else if (Settings::getInstance()->getString("ScreenSaverBehavior") == "random game")
+	{
+		ViewController::get()->goToRandomGame();
+		mTimer = 0;
+		mState = STATE_SCREENSAVER_ACTIVE;
+	}
 }
 
 void SystemScreenSaver::stopScreenSaver()
@@ -80,7 +87,7 @@ void SystemScreenSaver::renderScreenSaver()
 		Renderer::setMatrix(Eigen::Affine3f::Identity());
 		Renderer::drawRect(0, 0, Renderer::getScreenWidth(), Renderer::getScreenHeight(), (unsigned char)(mOpacity * 255));
 	}
-	else if (mState != STATE_INACTIVE)
+	else if ((mState != STATE_INACTIVE) && (Settings::getInstance()->getString("ScreenSaverBehavior") != "random game"))
 	{
 		Renderer::setMatrix(Eigen::Affine3f::Identity());
 		unsigned char opacity = Settings::getInstance()->getString("ScreenSaverBehavior") == "dim" ? 0xA0 : 0xFF;
@@ -125,7 +132,6 @@ void SystemScreenSaver::pickRandomVideo(std::string& path)
 	countVideos();
 	if (mVideoCount > 0)
 	{
-		srand((unsigned int)time(NULL));
 		int video = (int)(((float)rand() / float(RAND_MAX)) * (float)mVideoCount);
 
 		std::vector<SystemData*>:: iterator it;

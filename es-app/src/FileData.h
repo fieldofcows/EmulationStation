@@ -75,6 +75,8 @@ public:
 
 	MetaDataList metadata;
 
+	FileData* getRandom() const;
+
 private:
 	FileType mType;
 	boost::filesystem::path mPath;

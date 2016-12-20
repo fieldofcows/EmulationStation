@@ -102,6 +102,7 @@ GuiMenu::GuiMenu(Window* window) : GuiComponent(window), mMenu(window, "MAIN MEN
 			screensavers.push_back("dim");
 			screensavers.push_back("black");
 			screensavers.push_back("random video");
+			screensavers.push_back("random game");
 			for(auto it = screensavers.begin(); it != screensavers.end(); it++)
 				screensaver_behavior->add(*it, *it, Settings::getInstance()->getString("ScreenSaverBehavior") == *it);
 			s->addWithLabel("SCREENSAVER BEHAVIOR", screensaver_behavior);
