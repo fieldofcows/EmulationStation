@@ -50,7 +50,7 @@ namespace Renderer
 		//SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);
 
 #ifdef USE_OPENGL_ES
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 #endif
 
 		SDL_DisplayMode dispMode;

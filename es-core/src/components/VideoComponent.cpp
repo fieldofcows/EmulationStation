@@ -2,6 +2,7 @@
 #include "Renderer.h"
 #include "ThemeData.h"
 #include "Util.h"
+#include "resources/ShaderI420.h"
 #ifdef WIN32
 #include <codecvt>
 #endif
@@ -14,16 +15,17 @@ libvlc_instance_t*		VideoComponent::mVLC = NULL;
 static void *lock(void *data, void **p_pixels) {
     struct VideoContext *c = (struct VideoContext *)data;
     SDL_LockMutex(c->mutex);
-    SDL_LockSurface(c->surface);
-	*p_pixels = c->surface->pixels;
+	p_pixels[0] = c->bands[0];
+	p_pixels[1] = c->bands[1];
+	p_pixels[2] = c->bands[2];
     return NULL; // Picture identifier, not needed here.
 }
 
 // VLC just rendered a video frame.
 static void unlock(void *data, void *id, void *const *p_pixels) {
     struct VideoContext *c = (struct VideoContext *)data;
-    SDL_UnlockSurface(c->surface);
     SDL_UnlockMutex(c->mutex);
+    c->dataAvail = true;
 }
 
 // VLC wants to display a video frame.
@@ -47,9 +49,6 @@ VideoComponent::VideoComponent(Window* window) :
 	mConfig.showSnapshotDelay 		= false;
 	mConfig.showSnapshotNoVideo		= false;
 	mConfig.startDelay				= 0;
-
-	// Get an empty texture for rendering the video
-	mTexture = TextureResource::get("");
 
 	// Make sure VLC has been initialised
 	setupVLC();
@@ -131,87 +130,55 @@ void VideoComponent::setOpacity(unsigned char opacity)
 
 void VideoComponent::render(const Eigen::Affine3f& parentTrans)
 {
-	float x, y;
-
 	Eigen::Affine3f trans = parentTrans * getTransform();
 	GuiComponent::renderChildren(trans);
 
 	Renderer::setMatrix(trans);
 	
-	// Handle the case where the video is delayed
-	handleStartDelay();
+    // Handle the case where the video is delayed
+    handleStartDelay();
 
-	// Handle looping of the video
-	handleLooping();
+    // Handle looping of the video
+    handleLooping();
 
-	if (mIsPlaying && mContext.valid)
+	if (mIsPlaying && mContext.valid && mContext.dataAvail)
 	{
-		float tex_offs_x = 0.0f;
-		float tex_offs_y = 0.0f;
-		float x2;
-		float y2;
-
-		x = -(float)mSize.x() * mOrigin.x();
-		y = -(float)mSize.y() * mOrigin.y();
-		x2 = x+mSize.x();
-		y2 = y+mSize.y();
-
-		// Define a structure to contain the data for each vertex
-		struct Vertex
-		{
-			Eigen::Vector2f pos;
-			Eigen::Vector2f tex;
-			Eigen::Vector4f colour;
-		} vertices[6];
-
-		// We need two triangles to cover the rectangular area
-		vertices[0].pos[0] = x; 			vertices[0].pos[1] = y;
-		vertices[1].pos[0] = x; 			vertices[1].pos[1] = y2;
-		vertices[2].pos[0] = x2;			vertices[2].pos[1] = y;
-
-		vertices[3].pos[0] = x2;			vertices[3].pos[1] = y;
-		vertices[4].pos[0] = x; 			vertices[4].pos[1] = y2;
-		vertices[5].pos[0] = x2;			vertices[5].pos[1] = y2;
-
-		// Texture coordinates
-		vertices[0].tex[0] = -tex_offs_x; 			vertices[0].tex[1] = -tex_offs_y;
-		vertices[1].tex[0] = -tex_offs_x; 			vertices[1].tex[1] = 1.0f + tex_offs_y;
-		vertices[2].tex[0] = 1.0f + tex_offs_x;		vertices[2].tex[1] = -tex_offs_y;
-
-		vertices[3].tex[0] = 1.0f + tex_offs_x;		vertices[3].tex[1] = -tex_offs_y;
-		vertices[4].tex[0] = -tex_offs_x;			vertices[4].tex[1] = 1.0f + tex_offs_y;
-		vertices[5].tex[0] = 1.0f + tex_offs_x;		vertices[5].tex[1] = 1.0f + tex_offs_y;
-
-		// Colours - use this to fade the video in and out
-		for (int i = 0; i < (4 * 6); ++i) {
-			if ((i%4) < 3)
-				vertices[i / 4].colour[i % 4] = mFadeIn;
-			else
-				vertices[i / 4].colour[i % 4] = 1.0f;
-		}
+		// Setup the shader to translate from RGB to I420
+		ShaderI420* shader = dynamic_cast<ShaderI420*>(ResourceManager::getInstance()->shader(ResourceManager::SHADER_I420));
+		shader->modelMatrix(trans);
+		shader->textures(0, 1, 2);
 
 		glEnable(GL_TEXTURE_2D);
 
-		// Build a texture for the video frame
-		mTexture->initFromPixels((unsigned char*)mContext.surface->pixels, mContext.surface->w, mContext.surface->h);
-		mTexture->bind();
+		// Setup the textures that have come from the VLC frame
+		SDL_LockMutex(mContext.mutex);
+		// Y is full width and height, U and V are half width and height
+		GLint widths[3] = { (GLint)mVideoWidth, (GLint)mVideoWidth / 2, (GLint)mVideoWidth / 2 };
+		GLint heights[3] = { (GLint)mVideoHeight, (GLint)mVideoHeight / 2, (GLint)mVideoHeight / 2 };
+		for (int i = 2; i >= 0; --i)
+		{
+			glActiveTexture(GL_TEXTURE0 + i);
+			glBindTexture(GL_TEXTURE_2D, mContext.textures[i]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, widths[i], heights[i], 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, mContext.bands[i]);
+		}
+		SDL_UnlockMutex(mContext.mutex);
 
-		// Render it
-		glEnableClientState(GL_COLOR_ARRAY);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		// Set the fade in the shader
+		shader->fadeIn(mFadeIn);
 
-		glColorPointer(4, GL_FLOAT, sizeof(Vertex), &vertices[0].colour);
-		glVertexPointer(2, GL_FLOAT, sizeof(Vertex), &vertices[0].pos);
-		glTexCoordPointer(2, GL_FLOAT, sizeof(Vertex), &vertices[0].tex);
-
+		// Shader expects vertices and texture coords
+		enum {
+			ATTRIBUTE_VERTEX,
+			ATTRIBUTE_TEXCOORD,
+		};
+        glVertexAttribPointer(ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(VideoVertex), &mVertices[0].pos);
+        glEnableVertexAttribArray(ATTRIBUTE_VERTEX);
+        glVertexAttribPointer(ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(VideoVertex), &mVertices[0].tex);
+        glEnableVertexAttribArray(ATTRIBUTE_TEXCOORD);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
-
 		glDisable(GL_TEXTURE_2D);
+		shader->endUse();
 	}
 	else
 	{
@@ -283,10 +250,64 @@ void VideoComponent::setupContext()
 {
 	if (!mContext.valid)
 	{
-		// Create an RGBA surface to render the video into
-		mContext.surface = SDL_CreateRGBSurface(SDL_SWSURFACE, (int)mVideoWidth, (int)mVideoHeight, 32, 0xff000000, 0x00ff0000, 0x0000ff00, 0x000000ff);
+		// Create the YUV buffers for our video
 		mContext.mutex = SDL_CreateMutex();
+		mContext.numBands = 3;
+		mContext.bands[0] = new unsigned char[mVideoWidth*mVideoHeight];
+		mContext.bands[1] = new unsigned char[mVideoWidth*mVideoHeight / 4];
+		mContext.bands[2] = new unsigned char[mVideoWidth*mVideoHeight / 4];
+
+		glGenTextures(mContext.numBands, mContext.textures);
+
+		for (int i = 0; i < mContext.numBands; ++i)
+		{
+			glBindTexture(GL_TEXTURE_2D, mContext.textures[i]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		}
+
+		float tex_offs_x = 0.0f;
+		float tex_offs_y = 0.0f;
+		float x, y;
+		float x2;
+		float y2;
+
+		x = -(float)mSize.x() * mOrigin.x();
+		y = -(float)mSize.y() * mOrigin.y();
+		x2 = x+mSize.x();
+		y2 = y+mSize.y();
+
+		// We need two triangles to cover the rectangular area
+		mVertices[0].pos[0] = x; 			mVertices[0].pos[1] = y;
+		mVertices[1].pos[0] = x; 			mVertices[1].pos[1] = y2;
+		mVertices[2].pos[0] = x2;			mVertices[2].pos[1] = y;
+
+		mVertices[3].pos[0] = x2;			mVertices[3].pos[1] = y;
+		mVertices[4].pos[0] = x; 			mVertices[4].pos[1] = y2;
+		mVertices[5].pos[0] = x2;			mVertices[5].pos[1] = y2;
+
+		// Texture coordinates
+		mVertices[0].tex[0] = -tex_offs_x; 			mVertices[0].tex[1] = -tex_offs_y;
+		mVertices[1].tex[0] = -tex_offs_x; 			mVertices[1].tex[1] = 1.0f + tex_offs_y;
+		mVertices[2].tex[0] = 1.0f + tex_offs_x;		mVertices[2].tex[1] = -tex_offs_y;
+
+		mVertices[3].tex[0] = 1.0f + tex_offs_x;		mVertices[3].tex[1] = -tex_offs_y;
+		mVertices[4].tex[0] = -tex_offs_x;			mVertices[4].tex[1] = 1.0f + tex_offs_y;
+		mVertices[5].tex[0] = 1.0f + tex_offs_x;		mVertices[5].tex[1] = 1.0f + tex_offs_y;
+
+		// Colours - use this to fade the video in and out
+		for (int i = 0; i < (4 * 6); ++i) {
+			if ((i%4) < 3)
+				mVertices[i / 4].colour[i % 4] = mFadeIn;
+			else
+				mVertices[i / 4].colour[i % 4] = 1.0f;
+		}
+
+
 		mContext.valid = true;
+		mContext.dataAvail = false;
 	}
 }
 
@@ -294,9 +315,12 @@ void VideoComponent::freeContext()
 {
 	if (mContext.valid)
 	{
-		SDL_FreeSurface(mContext.surface);
+		for (unsigned i = 0; i < mContext.numBands; ++i)
+			delete[] mContext.bands[i];
+		glDeleteTextures(mContext.numBands, mContext.textures);
 		SDL_DestroyMutex(mContext.mutex);
 		mContext.valid = false;
+		mContext.dataAvail = false;
 	}
 }
 
@@ -340,6 +364,21 @@ void VideoComponent::handleLooping()
 			libvlc_media_player_play(mMediaPlayer);
 		}
 	}
+}
+
+extern "C" unsigned setup(void **opaque, char *chroma, unsigned *width, unsigned *height, unsigned *pitches,unsigned *lines)
+{
+	pitches[0] = *width;
+	pitches[1] = *width / 2;
+	pitches[2] = *width / 2;
+	lines[0] = *height;
+	lines[1] = *height / 2;
+	lines[2] = *height / 2;
+	return 1;
+}
+
+extern "C" void cleanup(void *opaque)
+{
 }
 
 void VideoComponent::startVideo()
@@ -389,7 +428,8 @@ void VideoComponent::startVideo()
 					mMediaPlayer = libvlc_media_player_new_from_media(mMedia);
 					libvlc_media_player_play(mMediaPlayer);
 					libvlc_video_set_callbacks(mMediaPlayer, lock, unlock, display, (void*)&mContext);
-					libvlc_video_set_format(mMediaPlayer, "RGBA", (int)mVideoWidth, (int)mVideoHeight, (int)mVideoWidth * 4);
+					//libvlc_video_set_format(mMediaPlayer, "RGBA", (int)mVideoWidth, (int)mVideoHeight, (int)mVideoWidth * 4);
+					libvlc_video_set_format_callbacks(mMediaPlayer, setup, cleanup);
 
 					// Update the playing state
 					mIsPlaying = true;

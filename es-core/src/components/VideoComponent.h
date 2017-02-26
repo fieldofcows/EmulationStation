@@ -15,9 +15,21 @@
 #include <boost/filesystem.hpp>
 
 struct VideoContext {
-	SDL_Surface*		surface;
+	unsigned			width;
+	unsigned			height;
+	unsigned			numBands;
+	unsigned char*		bands[3];
+	GLuint				textures[3];
 	SDL_mutex*			mutex;
 	bool				valid;
+	bool				dataAvail;
+};
+
+struct VideoVertex
+{
+	Eigen::Vector2f pos;
+	Eigen::Vector2f tex;
+	Eigen::Vector4f colour;
 };
 
 class VideoComponent : public GuiComponent
@@ -91,10 +103,10 @@ private:
 	libvlc_media_t*					mMedia;
 	libvlc_media_player_t*			mMediaPlayer;
 	VideoContext					mContext;
+	VideoVertex						mVertices[6];
 	unsigned						mVideoWidth;
 	unsigned						mVideoHeight;
 	Eigen::Vector2f 				mOrigin;
-	std::shared_ptr<TextureResource> mTexture;
 	float							mFadeIn;
 	std::string						mStaticImagePath;
 	ImageComponent					mStaticImage;

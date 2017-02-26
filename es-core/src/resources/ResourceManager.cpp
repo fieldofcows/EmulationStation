@@ -13,6 +13,7 @@ std::shared_ptr<ResourceManager> ResourceManager::sInstance = nullptr;
 
 ResourceManager::ResourceManager()
 {
+	mShaderI420.init();
 }
 
 std::shared_ptr<ResourceManager>& ResourceManager::getInstance()
@@ -109,4 +110,15 @@ void ResourceManager::reloadAll()
 void ResourceManager::addReloadable(std::weak_ptr<IReloadable> reloadable)
 {
 	mReloadables.push_back(reloadable);
+}
+
+Shader* ResourceManager::shader(SHADER sh)
+{
+	switch (sh)
+	{
+		case SHADER_I420:
+			return &mShaderI420;
+		default:
+			return NULL;
+	}
 }

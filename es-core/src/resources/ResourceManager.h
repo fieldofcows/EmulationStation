@@ -4,6 +4,7 @@
 #include <memory>
 #include <map>
 #include <list>
+#include "ShaderI420.h"
 
 //The ResourceManager exists to...
 //Allow loading resources embedded into the executable like an actual file.
@@ -37,6 +38,13 @@ public:
 	const ResourceData getFileData(const std::string& path) const;
 	bool fileExists(const std::string& path) const;
 
+	enum SHADER
+	{
+		SHADER_I420
+	};
+
+	Shader* shader(SHADER sh);
+
 private:
 	ResourceManager();
 
@@ -45,4 +53,6 @@ private:
 	ResourceData loadFile(const std::string& path) const;
 
 	std::list< std::weak_ptr<IReloadable> > mReloadables;
+
+	ShaderI420		mShaderI420;
 };
