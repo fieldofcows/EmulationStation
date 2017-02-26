@@ -7,7 +7,6 @@
 #include "Settings.h"
 #include "SystemData.h"
 #include "Util.h"
-#include "Log.h"
 
 #define FADE_TIME 			3000
 #define SWAP_VIDEO_TIMEOUT	30000
@@ -45,7 +44,6 @@ void SystemScreenSaver::startScreenSaver()
 		// Load a random video
 		std::string path;
 		pickRandomVideo(path);
-		LOG(LogInfo) << "Starting Video at path \"" << path << "\"";
 		if (!path.empty())
 		{
 	// Create the correct type of video component
@@ -68,7 +66,6 @@ void SystemScreenSaver::startScreenSaver()
 		}
 		else
 		{
-			LOG(LogError) << "Path is empty! Path: \"" << path << "\"";
 			// No videos. Just use a standard screensaver
 			mState = STATE_SCREENSAVER_ACTIVE;
 		}
