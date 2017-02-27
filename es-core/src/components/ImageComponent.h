@@ -9,6 +9,8 @@
 #include <memory>
 #include "resources/TextureResource.h"
 
+class ShaderRGBA;
+
 class ImageComponent : public GuiComponent
 {
 public:
@@ -77,10 +79,7 @@ private:
 		Eigen::Vector2f tex;
 	} mVertices[6];
 
-	GLubyte mColors[6*4];
-
 	void updateVertices();
-	void updateColors();
 	void fadeIn(bool textureLoaded);
 
 	unsigned int mColorShift;

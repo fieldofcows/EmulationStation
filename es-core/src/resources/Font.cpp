@@ -6,6 +6,7 @@
 #include "Renderer.h"
 #include "Log.h"
 #include "Util.h"
+#include "resources/ShaderRGBA.h"
 
 FT_Library Font::sLibrary = NULL;
 
@@ -533,28 +534,29 @@ void Font::renderTextCache(TextCache* cache)
 
 	for(auto it = cache->vertexLists.begin(); it != cache->vertexLists.end(); it++)
 	{
+		ShaderRGBA* shader = dynamic_cast<ShaderRGBA*>(ResourceManager::getInstance()->shader(ResourceManager::SHADER_RGBA));
+		shader->use();
+
 		assert(*it->textureIdPtr != 0);
 
 		auto vertexList = *it;
+
+		glActiveTexture(GL_TEXTURE0);
+		shader->texture(0);
 
 		glBindTexture(GL_TEXTURE_2D, *it->textureIdPtr);
 		glEnable(GL_TEXTURE_2D);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
+		shader->colour(it->colors[0]);
 
-		glVertexPointer(2, GL_FLOAT, sizeof(TextCache::Vertex), it->verts[0].pos.data());
-		glTexCoordPointer(2, GL_FLOAT, sizeof(TextCache::Vertex), it->verts[0].tex.data());
-		glColorPointer(4, GL_UNSIGNED_BYTE, 0, it->colors.data());
+        glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, 0, it->verts[0].pos.data());
+        glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_VERTEX);
+        glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, 0, it->verts[0].tex.data());
+        glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_TEXCOORD);
 
-		glDrawArrays(GL_TRIANGLES, 0, it->verts.size());
-
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
+        glDrawArrays(GL_TRIANGLES, 0, it->verts.size());
 
 		glDisable(GL_TEXTURE_2D);
 		glDisable(GL_BLEND);

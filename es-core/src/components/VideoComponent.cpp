@@ -145,7 +145,6 @@ void VideoComponent::render(const Eigen::Affine3f& parentTrans)
 	{
 		// Setup the shader to translate from RGB to I420
 		ShaderI420* shader = dynamic_cast<ShaderI420*>(ResourceManager::getInstance()->shader(ResourceManager::SHADER_I420));
-		shader->modelMatrix(trans);
 		shader->textures(0, 1, 2);
 
 		glEnable(GL_TEXTURE_2D);
@@ -167,14 +166,10 @@ void VideoComponent::render(const Eigen::Affine3f& parentTrans)
 		shader->fadeIn(mFadeIn);
 
 		// Shader expects vertices and texture coords
-		enum {
-			ATTRIBUTE_VERTEX,
-			ATTRIBUTE_TEXCOORD,
-		};
-        glVertexAttribPointer(ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(VideoVertex), &mVertices[0].pos);
-        glEnableVertexAttribArray(ATTRIBUTE_VERTEX);
-        glVertexAttribPointer(ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(VideoVertex), &mVertices[0].tex);
-        glEnableVertexAttribArray(ATTRIBUTE_TEXCOORD);
+        glVertexAttribPointer(ShaderI420::ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(VideoVertex), &mVertices[0].pos);
+        glEnableVertexAttribArray(ShaderI420::ATTRIBUTE_VERTEX);
+        glVertexAttribPointer(ShaderI420::ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(VideoVertex), &mVertices[0].tex);
+        glEnableVertexAttribArray(ShaderI420::ATTRIBUTE_TEXCOORD);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		glDisable(GL_TEXTURE_2D);

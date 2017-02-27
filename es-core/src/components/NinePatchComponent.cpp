@@ -143,6 +143,8 @@ void NinePatchComponent::render(const Eigen::Affine3f& parentTrans)
 {
 	Eigen::Affine3f trans = roundMatrix(parentTrans * getTransform());
 	
+	return;
+
 	if(mTexture && mVertices != NULL)
 	{
 		Renderer::setMatrix(trans);

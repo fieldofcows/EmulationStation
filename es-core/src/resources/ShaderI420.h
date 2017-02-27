@@ -13,21 +13,22 @@
 class ShaderI420: public Shader
 {
 public:
+	enum {
+		ATTRIBUTE_VERTEX,
+		ATTRIBUTE_TEXCOORD,
+	};
+
 	ShaderI420();
 	virtual ~ShaderI420();
 
 	virtual void init();
 
-	void modelMatrix(const Eigen::Affine3f& mat);
-	void projectionMatrix(const Eigen::Affine3f& mat);
 	void textures(GLuint y, GLuint u, GLuint v);
 	void fadeIn(float fade);
 
 private:
 	GLuint	mVertex;
 	GLuint	mFragment;
-	GLint	mUniformModel;
-	GLint	mUniformProjection;
 	GLint	mUniformY;
 	GLint	mUniformU;
 	GLint	mUniformV;

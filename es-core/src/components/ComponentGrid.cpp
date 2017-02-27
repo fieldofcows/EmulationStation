@@ -361,6 +361,8 @@ void ComponentGrid::render(const Eigen::Affine3f& parentTrans)
 
 	renderChildren(trans);
 	
+	return;
+
 	// draw cell separators
 	if(mLines.size())
 	{

@@ -13,7 +13,9 @@ std::shared_ptr<ResourceManager> ResourceManager::sInstance = nullptr;
 
 ResourceManager::ResourceManager()
 {
+	mShaderRGBA.init();
 	mShaderI420.init();
+	mShaderVector.init();
 }
 
 std::shared_ptr<ResourceManager>& ResourceManager::getInstance()
@@ -116,8 +118,12 @@ Shader* ResourceManager::shader(SHADER sh)
 {
 	switch (sh)
 	{
+		case SHADER_RGBA:
+			return &mShaderRGBA;
 		case SHADER_I420:
 			return &mShaderI420;
+		case SHADER_VECTOR:
+			return &mShaderVector;
 		default:
 			return NULL;
 	}

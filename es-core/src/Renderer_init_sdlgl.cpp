@@ -153,6 +153,8 @@ namespace Renderer
 		glMatrixMode(GL_MODELVIEW);
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
+		Shader::projectionMatrix(Shader::getOrthoProjection(0.0f, display_width, display_height, 0.0f, -1.0f, 1.0f));
+
 		return true;
 	}
 

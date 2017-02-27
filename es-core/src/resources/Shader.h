@@ -22,14 +22,22 @@ public:
 	virtual void use();
 	virtual void endUse();
 
+	static Eigen::Affine3f getOrthoProjection(float left, float right,float bottom, float top,float near, float far);
+	static void projectionMatrix(const Eigen::Affine3f& mat);
+	static void modelViewMatrix(const Eigen::Affine3f& mat);
+
 protected:
 	bool parseShader(std::string code, GLuint tp, GLuint* shaderObject);
 	bool linkShaders(std::vector<GLuint> shaders, GLuint* program);
 
-	Eigen::Affine3f getOrthoProjection(float left, float right,float bottom, float top,float near, float far);
 
-	GLuint			mProgram;
-	static GLuint 	mCurrentProgram;
+	static Eigen::Affine3f 	mProjection;
+	static Eigen::Affine3f 	mModelView;
+	GLint					mUniformProjection;
+	GLint					mUniformModelView;
+
+	GLuint					mProgram;
+	static GLuint 			mCurrentProgram;
 };
 
 #endif /* ES_CORE_SRC_RESOURCES_SHADER_H_ */

@@ -1,11 +1,11 @@
 /*
- * ShaderI420.cpp
+ * ShaderRGBA.cpp
  *
  *  Created on: 22 Feb 2017
  *      Author: rhopkins
  */
 
-#include <resources/ShaderI420.h>
+#include <resources/ShaderRGBA.h>
 #include "Renderer.h"
 
 static const char* vertex_shader =
@@ -26,33 +26,25 @@ void main(void)													\
 static const char* fragment_shader =
 "																\
 varying vec2 		v_texcoord;									\
-uniform sampler2D 	u_tex_y;									\
-uniform sampler2D 	u_tex_u;									\
-uniform sampler2D 	u_tex_v;									\
-uniform float		u_fade;										\
+uniform sampler2D 	u_tex;										\
+uniform vec4		u_colour;									\
 																\
 void main()														\
 {																\
-    float y = texture2D(u_tex_y, v_texcoord).r;  				\
-    float u = texture2D(u_tex_u, v_texcoord).r - 0.5;  			\
-    float v = texture2D(u_tex_v, v_texcoord).r - 0.5;  			\
-    float r = (y + 1.402 * v) * u_fade;							\
-    float g = (y - 0.344 * u - 0.714 * v) * u_fade;				\
-    float b = (y + 1.772 * u) * u_fade;							\
-    gl_FragColor = vec4(r, g, b, 1.0);							\
+    gl_FragColor = texture2D(u_tex, v_texcoord) * u_colour;		\
 }																\
 ";
 
-ShaderI420::ShaderI420() : Shader(), mVertex(0), mFragment(0),
-			mUniformY(0), mUniformU(0), mUniformV(0), mUniformFade(0)
+ShaderRGBA::ShaderRGBA() : Shader(), mVertex(0), mFragment(0),
+			mUniformTexture(0), mUniformColour(0)
 {
 }
 
-ShaderI420::~ShaderI420()
+ShaderRGBA::~ShaderRGBA()
 {
 }
 
-void ShaderI420::init()
+void ShaderRGBA::init()
 {
 	std::vector<GLuint> shaders;
 
@@ -65,22 +57,23 @@ void ShaderI420::init()
 
 	mUniformModelView = glGetUniformLocation(mProgram, "u_modelMatrix");
 	mUniformProjection = glGetUniformLocation(mProgram, "u_projectionMatrix");
-	mUniformY = glGetUniformLocation(mProgram, "u_tex_y");
-	mUniformU = glGetUniformLocation(mProgram, "u_tex_u");
-	mUniformV = glGetUniformLocation(mProgram, "u_tex_v");
-	mUniformFade = glGetUniformLocation(mProgram, "u_fade");
+	mUniformTexture = glGetUniformLocation(mProgram, "u_tex");
+	mUniformColour = glGetUniformLocation(mProgram, "u_colour");
 }
 
-void ShaderI420::textures(GLuint y, GLuint u, GLuint v)
+void ShaderRGBA::texture(GLuint rgba)
 {
 	use();
-	glUniform1i(mUniformY, y);
-	glUniform1i(mUniformU, u);
-	glUniform1i(mUniformV, v);
+	glUniform1i(mUniformTexture, rgba);
 }
 
-void ShaderI420::fadeIn(float fade)
+void ShaderRGBA::colour(unsigned int rgba)
 {
 	use();
-	glUniform1f(mUniformFade, fade);
+	GLfloat val[4];
+	val[0] = (GLfloat)((rgba & 0xff000000) >> 24) / 255.0f;
+	val[1] = (GLfloat)((rgba & 0x00ff0000) >> 16) / 255.0f;
+	val[2] = (GLfloat)((rgba & 0x0000ff00) >> 8) / 255.0f;
+	val[3] = (GLfloat)((rgba & 0x000000ff)) / 255.0f;
+	glUniform4fv(mUniformColour, 1, val);
 }

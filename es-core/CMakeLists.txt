@@ -55,6 +55,8 @@ set(CORE_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ResourceManager.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/Shader.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderI420.h
+	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderRGBA.h
+	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderVector.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/TextureResource.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/TextureData.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/TextureDataManager.h
@@ -113,6 +115,8 @@ set(CORE_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ResourceManager.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/Shader.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderI420.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderRGBA.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderVector.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/TextureResource.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/TextureData.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/TextureDataManager.cpp

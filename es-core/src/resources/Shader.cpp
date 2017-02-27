@@ -10,7 +10,10 @@
 
 GLuint 	Shader::mCurrentProgram = 0;
 
-Shader::Shader() : mProgram(0)
+Eigen::Affine3f Shader::mProjection;
+Eigen::Affine3f Shader::mModelView;
+
+Shader::Shader() : mProgram(0), mUniformModelView(0), mUniformProjection(0)
 {
 	// TODO Auto-generated constructor stub
 
@@ -87,6 +90,9 @@ void Shader::use()
 		glUseProgram(mProgram);
 		mCurrentProgram = mProgram;
 	}
+	// Setup the project uniform values that must be present in all of our shaders
+	glUniformMatrix4fv(mUniformModelView, 1, GL_FALSE, (float*)mModelView.data());
+	glUniformMatrix4fv(mUniformProjection, 1, GL_FALSE, (float*)mProjection.data());
 }
 
 void Shader::endUse()
@@ -101,6 +107,8 @@ void Shader::endUse()
 Eigen::Affine3f Shader::getOrthoProjection(float left, float right,float bottom, float top,float near, float far)
 {
 	Eigen::Affine3f proj;
+	proj.setIdentity();
+
 	float a = 2.0f / (right - left);
 	float b = 2.0f / (top - bottom);
 	float c = -2.0f / (far - near);
@@ -118,4 +126,14 @@ Eigen::Affine3f Shader::getOrthoProjection(float left, float right,float bottom,
 	proj.data()[15] = 1.0f;
 
 	return proj;
+}
+
+void Shader::projectionMatrix(const Eigen::Affine3f& mat)
+{
+	mProjection = mat;
+}
+
+void Shader::modelViewMatrix(const Eigen::Affine3f& mat)
+{
+	mModelView = mat;
 }

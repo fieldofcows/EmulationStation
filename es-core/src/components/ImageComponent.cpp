@@ -6,6 +6,7 @@
 #include "Renderer.h"
 #include "ThemeData.h"
 #include "Util.h"
+#include "resources/ShaderRGBA.h"
 
 Eigen::Vector2i ImageComponent::getTextureSize() const
 {
@@ -25,7 +26,6 @@ ImageComponent::ImageComponent(Window* window, bool forceLoad, bool dynamic) : G
 	mTargetIsMax(false), mFlipX(false), mFlipY(false), mOrigin(0.0, 0.0), mTargetSize(0, 0), mColorShift(0xFFFFFFFF),
 	mForceLoad(forceLoad), mDynamic(dynamic), mFadeOpacity(0.0f), mFading(false)
 {
-	updateColors();
 }
 
 ImageComponent::~ImageComponent()
@@ -163,14 +163,12 @@ void ImageComponent::setColorShift(unsigned int color)
 	// Grab the opacity from the color shift because we may need to apply it if
 	// fading textures in
 	mOpacity = color & 0xff;
-	updateColors();
 }
 
 void ImageComponent::setOpacity(unsigned char opacity)
 {
 	mOpacity = opacity;
 	mColorShift = (mColorShift >> 8 << 8) | mOpacity;
-	updateColors();
 }
 
 void ImageComponent::updateVertices()
@@ -229,11 +227,6 @@ void ImageComponent::updateVertices()
 	}
 }
 
-void ImageComponent::updateColors()
-{
-	Renderer::buildGLColorArray(mColors, mColorShift, 6);
-}
-
 void ImageComponent::render(const Eigen::Affine3f& parentTrans)
 {
 	Eigen::Affine3f trans = roundMatrix(parentTrans * getTransform());
@@ -244,32 +237,36 @@ void ImageComponent::render(const Eigen::Affine3f& parentTrans)
 		if(mTexture->isInitialized())
 		{
 			// actually draw the image
+			ShaderRGBA* shader = dynamic_cast<ShaderRGBA*>(ResourceManager::getInstance()->shader(ResourceManager::SHADER_RGBA));
+			shader->use();
+
 			// The bind() function returns false if the texture is not currently loaded. A blank
 			// texture is bound in this case but we want to handle a fade so it doesn't just 'jump' in
 			// when it finally loads
+			glActiveTexture(GL_TEXTURE0);
+			shader->texture(0);
 			fadeIn(mTexture->bind());
+
+			// Update the colour shift
+			shader->colour(mColorShift);
 
 			glEnable(GL_TEXTURE_2D);
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-			glEnableClientState(GL_VERTEX_ARRAY);
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-			glEnableClientState(GL_COLOR_ARRAY);
-
-			glVertexPointer(2, GL_FLOAT, sizeof(Vertex), &mVertices[0].pos);
-			glTexCoordPointer(2, GL_FLOAT, sizeof(Vertex), &mVertices[0].tex);
-			glColorPointer(4, GL_UNSIGNED_BYTE, 0, mColors);
-
+	        glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(Vertex), &mVertices[0].pos);
+	        glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_VERTEX);
+	        glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(Vertex), &mVertices[0].tex);
+	        glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_TEXCOORD);
 			glDrawArrays(GL_TRIANGLES, 0, 6);
-
-			glDisableClientState(GL_VERTEX_ARRAY);
-			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-			glDisableClientState(GL_COLOR_ARRAY);
 
 			glDisable(GL_TEXTURE_2D);
 			glDisable(GL_BLEND);
-		}else{
+
+			shader->endUse();
+		}
+		else
+		{
 			LOG(LogError) << "Image texture is not initialized!";
 			mTexture.reset();
 		}
@@ -292,7 +289,6 @@ void ImageComponent::fadeIn(bool textureLoaded)
 				mFading = true;
 				// Set the colours to be translucent
 				mColorShift = (mColorShift >> 8 << 8) | 0;
-				updateColors();
 			}
 		}
 		else if (mFading)
@@ -314,7 +310,6 @@ void ImageComponent::fadeIn(bool textureLoaded)
 			// Apply the combination of the target opacity and current fade
 			float newOpacity = (float)mOpacity * ((float)mFadeOpacity / 255.0f);
 			mColorShift = (mColorShift >> 8 << 8) | (unsigned char)newOpacity;
-			updateColors();
 		}
 	}
 }

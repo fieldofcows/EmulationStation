@@ -4,7 +4,9 @@
 #include <memory>
 #include <map>
 #include <list>
+#include "ShaderRGBA.h"
 #include "ShaderI420.h"
+#include "ShaderVector.h"
 
 //The ResourceManager exists to...
 //Allow loading resources embedded into the executable like an actual file.
@@ -40,7 +42,9 @@ public:
 
 	enum SHADER
 	{
-		SHADER_I420
+		SHADER_RGBA,
+		SHADER_I420,
+		SHADER_VECTOR
 	};
 
 	Shader* shader(SHADER sh);
@@ -54,5 +58,7 @@ private:
 
 	std::list< std::weak_ptr<IReloadable> > mReloadables;
 
+	ShaderRGBA		mShaderRGBA;
 	ShaderI420		mShaderI420;
+	ShaderVector	mShaderVector;
 };

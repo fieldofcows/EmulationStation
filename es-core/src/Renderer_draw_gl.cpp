@@ -3,6 +3,7 @@
 #include GLHEADER
 #include <iostream>
 #include "resources/Font.h"
+#include "resources/ShaderVector.h"
 #include <boost/filesystem.hpp>
 #include "Log.h"
 #include <stack>
@@ -92,11 +93,10 @@ namespace Renderer {
 
 	void drawRect(int x, int y, int w, int h, unsigned int color, GLenum blend_sfactor, GLenum blend_dfactor)
 	{
-#ifdef USE_OPENGL_ES
+		ShaderVector* shader = dynamic_cast<ShaderVector*>(ResourceManager::getInstance()->shader(ResourceManager::SHADER_VECTOR));
+		shader->use();
+
 		GLshort points[12];
-#else
-		GLint points[12];
-#endif
 
 		points[0] = x; points [1] = y;
 		points[2] = x; points[3] = y + h;
@@ -106,35 +106,23 @@ namespace Renderer {
 		points[8] = x; points[9] = y + h;
 		points[10] = x + w; points[11] = y + h;
 
-		GLubyte colors[6*4];
-		buildGLColorArray(colors, color, 6);
-
 		glEnable(GL_BLEND);
 		glBlendFunc(blend_sfactor, blend_dfactor);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
 
-#ifdef USE_OPENGL_ES
-		glVertexPointer(2, GL_SHORT, 0, points);
-#else
-		glVertexPointer(2, GL_INT, 0, points);
-#endif
-		glColorPointer(4, GL_UNSIGNED_BYTE, 0, colors);
+		shader->colour(color);
 
+        glVertexAttribPointer(ShaderVector::ATTRIBUTE_VERTEX, 2, GL_SHORT, 0, 0, points);
+        glEnableVertexAttribArray(ShaderVector::ATTRIBUTE_VERTEX);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		glDisable(GL_BLEND);
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
-	}
 
-	void setMatrix(float* matrix)
-	{
-		glLoadMatrixf(matrix);
+		shader->endUse();
 	}
 
 	void setMatrix(const Eigen::Affine3f& matrix)
 	{
-		setMatrix((float*)matrix.data());
+		Shader::modelViewMatrix(matrix);
+		glLoadMatrixf((float*)matrix.data());
 	}
 };

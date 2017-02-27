@@ -89,6 +89,7 @@ void RatingComponent::updateVertices()
 
 void RatingComponent::render(const Eigen::Affine3f& parentTrans)
 {
+	return;
 	Eigen::Affine3f trans = roundMatrix(parentTrans * getTransform());
 	Renderer::setMatrix(trans);
 
