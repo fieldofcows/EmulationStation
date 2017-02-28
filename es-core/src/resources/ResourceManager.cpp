@@ -16,6 +16,7 @@ ResourceManager::ResourceManager()
 	mShaderRGBA.init();
 	mShaderI420.init();
 	mShaderVector.init();
+	mShaderFont.init();
 }
 
 std::shared_ptr<ResourceManager>& ResourceManager::getInstance()
@@ -124,6 +125,8 @@ Shader* ResourceManager::shader(SHADER sh)
 			return &mShaderI420;
 		case SHADER_VECTOR:
 			return &mShaderVector;
+		case SHADER_FONT:
+			return &mShaderFont;
 		default:
 			return NULL;
 	}

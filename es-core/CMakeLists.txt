@@ -54,6 +54,7 @@ set(CORE_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/Font.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ResourceManager.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/Shader.h
+	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderFont.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderI420.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderRGBA.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderVector.h
@@ -114,6 +115,7 @@ set(CORE_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/Font.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ResourceManager.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/Shader.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderFont.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderI420.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderRGBA.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderVector.cpp

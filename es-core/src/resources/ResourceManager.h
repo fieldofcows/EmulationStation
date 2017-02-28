@@ -7,6 +7,7 @@
 #include "ShaderRGBA.h"
 #include "ShaderI420.h"
 #include "ShaderVector.h"
+#include "ShaderFont.h"
 
 //The ResourceManager exists to...
 //Allow loading resources embedded into the executable like an actual file.
@@ -44,7 +45,8 @@ public:
 	{
 		SHADER_RGBA,
 		SHADER_I420,
-		SHADER_VECTOR
+		SHADER_VECTOR,
+		SHADER_FONT
 	};
 
 	Shader* shader(SHADER sh);
@@ -61,4 +63,5 @@ private:
 	ShaderRGBA		mShaderRGBA;
 	ShaderI420		mShaderI420;
 	ShaderVector	mShaderVector;
+	ShaderFont		mShaderFont;
 };

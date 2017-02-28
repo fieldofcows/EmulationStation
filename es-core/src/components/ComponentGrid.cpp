@@ -2,6 +2,8 @@
 #include "Log.h"
 #include "Renderer.h"
 #include "Settings.h"
+#include "resources/ResourceManager.h"
+#include "resources/ShaderVector.h"
 
 using namespace GridFlags;
 
@@ -193,9 +195,6 @@ void ComponentGrid::updateSeparators()
 			mLines.push_back(Vert(mLines.back().x, pos.y() + size.y()));
 		}
 	}
-
-	mLineColors.reserve(mLines.size());
-	Renderer::buildGLColorArray((GLubyte*)mLineColors.data(), 0xC6C7C6FF, mLines.size());
 }
 
 void ComponentGrid::onSizeChanged()
@@ -361,26 +360,24 @@ void ComponentGrid::render(const Eigen::Affine3f& parentTrans)
 
 	renderChildren(trans);
 	
-	return;
-
 	// draw cell separators
 	if(mLines.size())
 	{
 		Renderer::setMatrix(trans);
 
+		ShaderVector* shader = dynamic_cast<ShaderVector*>(ResourceManager::getInstance()->shader(ResourceManager::SHADER_VECTOR));
+		shader->use();
+
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
 
-		glVertexPointer(2, GL_FLOAT, 0, &mLines[0].x);
-		glColorPointer(4, GL_UNSIGNED_BYTE, 0, mLineColors.data());
+		shader->colour(0xC6C7C6FF);
 
+        glVertexAttribPointer(ShaderVector::ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, 0, &mLines[0].x);
+        glEnableVertexAttribArray(ShaderVector::ATTRIBUTE_VERTEX);
 		glDrawArrays(GL_LINES, 0, mLines.size());
 
 		glDisable(GL_BLEND);
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
 	}
 }
 

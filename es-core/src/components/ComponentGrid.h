@@ -101,7 +101,6 @@ private:
 	};
 
 	std::vector<Vert> mLines;
-	std::vector<unsigned int> mLineColors;
 
 	// Update position & size
 	void updateCellComponent(const GridEntry& cell);
