@@ -549,11 +549,11 @@ void Font::renderTextCache(TextCache* cache)
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		shader->colour(it->colors[0]);
+		shader->colour(cache->mColor);
 
-        glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, 0, it->verts[0].pos.data());
+        glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(TextCache::Vertex), it->verts[0].pos.data());
         glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_VERTEX);
-        glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, 0, it->verts[0].tex.data());
+        glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(TextCache::Vertex), it->verts[0].tex.data());
         glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_TEXCOORD);
 
         glDrawArrays(GL_TRIANGLES, 0, it->verts.size());
@@ -801,6 +801,7 @@ TextCache* Font::buildTextCache(const std::string& text, Eigen::Vector2f offset,
 	TextCache* cache = new TextCache();
 	cache->vertexLists.resize(vertMap.size());
 	cache->metrics = { sizeText(text, lineSpacing) };
+	cache->mColor = color;
 
 	unsigned int i = 0;
 	for(auto it = vertMap.begin(); it != vertMap.end(); it++)
@@ -809,9 +810,6 @@ TextCache* Font::buildTextCache(const std::string& text, Eigen::Vector2f offset,
 
 		vertList.textureIdPtr = &it->first->textureId;
 		vertList.verts = it->second;
-
-		vertList.colors.resize(4 * it->second.size());
-		Renderer::buildGLColorArray(vertList.colors.data(), color, it->second.size());
 	}
 
 	clearFaceCache();
@@ -826,8 +824,7 @@ TextCache* Font::buildTextCache(const std::string& text, float offsetX, float of
 
 void TextCache::setColor(unsigned int color)
 {
-	for(auto it = vertexLists.begin(); it != vertexLists.end(); it++)
-		Renderer::buildGLColorArray(it->colors.data(), color, it->verts.size());
+	mColor = color;
 }
 
 std::shared_ptr<Font> Font::getFromTheme(const ThemeData::ThemeElement* elem, unsigned int properties, const std::shared_ptr<Font>& orig)

@@ -154,10 +154,10 @@ protected:
 	{
 		GLuint* textureIdPtr; // this is a pointer because the texture ID can change during deinit/reinit (when launching a game)
 		std::vector<Vertex> verts;
-		std::vector<GLubyte> colors;
 	};
 
 	std::vector<VertexList> vertexLists;
+	unsigned int mColor;
 
 public:
 	struct CacheMetrics
