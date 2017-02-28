@@ -109,7 +109,9 @@ namespace Renderer {
 		glEnable(GL_BLEND);
 		glBlendFunc(blend_sfactor, blend_dfactor);
 
-		shader->colour(color);
+		glDisableVertexAttribArray(ShaderVector::ATTRIBUTE_COLOUR);
+		glVertexAttrib4f(ShaderVector::ATTRIBUTE_COLOUR, COLOR_INT_TO_GL_RED(color), COLOR_INT_TO_GL_GREEN(color),
+													   COLOR_INT_TO_GL_BLUE(color), COLOR_INT_TO_GL_ALPHA(color));
 
         glVertexAttribPointer(ShaderVector::ATTRIBUTE_VERTEX, 2, GL_SHORT, 0, 0, points);
         glEnableVertexAttribArray(ShaderVector::ATTRIBUTE_VERTEX);

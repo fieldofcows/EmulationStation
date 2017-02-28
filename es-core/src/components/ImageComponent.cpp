@@ -248,7 +248,9 @@ void ImageComponent::render(const Eigen::Affine3f& parentTrans)
 			fadeIn(mTexture->bind());
 
 			// Update the colour shift
-			shader->colour(mColorShift);
+	        glDisableVertexAttribArray(ShaderRGBA::ATTRIBUTE_COLOUR);
+	        glVertexAttrib4f(ShaderRGBA::ATTRIBUTE_COLOUR, COLOR_INT_TO_GL_RED(mColorShift), COLOR_INT_TO_GL_GREEN(mColorShift),
+	        				  	  	  	  	  	  	  	   COLOR_INT_TO_GL_BLUE(mColorShift), COLOR_INT_TO_GL_ALPHA(mColorShift));
 
 			glEnable(GL_TEXTURE_2D);
 			glEnable(GL_BLEND);

@@ -12,7 +12,9 @@ static const char* vertex_shader =
 "																\
 attribute vec4 	a_position;										\
 attribute vec2 	a_texcoord;										\
+attribute vec4	a_colour;										\
 varying vec2 	v_texcoord;										\
+varying vec4	v_colour;										\
 uniform mat4 	u_modelMatrix;									\
 uniform mat4 	u_projectionMatrix;								\
   																\
@@ -20,23 +22,24 @@ void main(void)													\
 {																\
      gl_Position = u_projectionMatrix * u_modelMatrix * a_position;	\
      v_texcoord = a_texcoord.xy;								\
+     v_colour = a_colour;										\
 }																\
 ";
 
 static const char* fragment_shader =
 "																\
 varying vec2 		v_texcoord;									\
+varying vec4		v_colour;									\
 uniform sampler2D 	u_tex;										\
-uniform vec4		u_colour;									\
 																\
 void main()														\
 {																\
-    gl_FragColor = texture2D(u_tex, v_texcoord) * u_colour;		\
+    gl_FragColor = texture2D(u_tex, v_texcoord) * v_colour;		\
 }																\
 ";
 
 ShaderRGBA::ShaderRGBA() : Shader(), mVertex(0), mFragment(0),
-			mUniformTexture(0), mUniformColour(0)
+			mUniformTexture(0)
 {
 }
 
@@ -58,7 +61,6 @@ void ShaderRGBA::init()
 	mUniformModelView = glGetUniformLocation(mProgram, "u_modelMatrix");
 	mUniformProjection = glGetUniformLocation(mProgram, "u_projectionMatrix");
 	mUniformTexture = glGetUniformLocation(mProgram, "u_tex");
-	mUniformColour = glGetUniformLocation(mProgram, "u_colour");
 }
 
 void ShaderRGBA::texture(GLuint rgba)
@@ -75,5 +77,5 @@ void ShaderRGBA::colour(unsigned int rgba)
 	val[1] = (GLfloat)((rgba & 0x00ff0000) >> 16) / 255.0f;
 	val[2] = (GLfloat)((rgba & 0x0000ff00) >> 8) / 255.0f;
 	val[3] = (GLfloat)((rgba & 0x000000ff)) / 255.0f;
-	glUniform4fv(mUniformColour, 1, val);
 }
+

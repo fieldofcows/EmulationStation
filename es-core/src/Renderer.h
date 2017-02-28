@@ -10,6 +10,11 @@
 class GuiComponent;
 class Font;
 
+#define COLOR_INT_TO_GL_RED(x) 			((GLfloat)(((x) & 0xff000000) >> 24) / 255.0f)
+#define COLOR_INT_TO_GL_GREEN(x)		((GLfloat)(((x) & 0x00ff0000) >> 16) / 255.0f)
+#define COLOR_INT_TO_GL_BLUE(x)			((GLfloat)(((x) & 0x0000ff00) >> 8) / 255.0f)
+#define COLOR_INT_TO_GL_ALPHA(x)		((GLfloat)(((x) & 0x000000ff)) / 255.0f)
+
 //The Renderer provides several higher-level functions for drawing (rectangles, text, etc.).
 //Renderer_draw_gl.cpp has most of the higher-level functions and wrappers.
 //Renderer_init_*.cpp has platform-specific renderer initialziation/deinitialziation code.  (e.g. the Raspberry Pi sets up dispmanx/OpenGL ES)

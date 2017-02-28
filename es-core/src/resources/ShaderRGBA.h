@@ -16,6 +16,7 @@ public:
 	enum {
 		ATTRIBUTE_VERTEX,
 		ATTRIBUTE_TEXCOORD,
+		ATTRIBUTE_COLOUR
 	};
 
 	ShaderRGBA();

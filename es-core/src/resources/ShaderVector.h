@@ -14,7 +14,8 @@ class ShaderVector: public Shader
 {
 public:
 	enum {
-		ATTRIBUTE_VERTEX
+		ATTRIBUTE_VERTEX,
+		ATTRIBUTE_COLOUR
 	};
 
 	ShaderVector();
@@ -22,12 +23,9 @@ public:
 
 	virtual void init();
 
-	void colour(unsigned Vector);
-
 private:
 	GLuint	mVertex;
 	GLuint	mFragment;
-	GLint	mUniformColour;
 };
 
 #endif /* ES_CORE_SRC_RESOURCES_SHADERI420_H_ */

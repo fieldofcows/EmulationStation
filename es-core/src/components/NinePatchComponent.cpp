@@ -4,6 +4,7 @@
 #include "Renderer.h"
 #include "ThemeData.h"
 #include "Util.h"
+#include "resources/ShaderRGBA.h"
 
 NinePatchComponent::NinePatchComponent(Window* window, const std::string& path, unsigned int edgeColor, unsigned int centerColor) : GuiComponent(window),
 	mEdgeColor(edgeColor), mCenterColor(centerColor), 
@@ -143,31 +144,29 @@ void NinePatchComponent::render(const Eigen::Affine3f& parentTrans)
 {
 	Eigen::Affine3f trans = roundMatrix(parentTrans * getTransform());
 	
-	return;
-
 	if(mTexture && mVertices != NULL)
 	{
 		Renderer::setMatrix(trans);
 
+		ShaderRGBA* shader = dynamic_cast<ShaderRGBA*>(ResourceManager::getInstance()->shader(ResourceManager::SHADER_RGBA));
+		shader->use();
+
+		glActiveTexture(GL_TEXTURE0);
+		shader->texture(0);
 		mTexture->bind();
 
 		glEnable(GL_TEXTURE_2D);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
-
-		glVertexPointer(2, GL_FLOAT, sizeof(Vertex), &mVertices[0].pos);
-		glTexCoordPointer(2, GL_FLOAT, sizeof(Vertex), &mVertices[0].tex);
-		glColorPointer(4, GL_UNSIGNED_BYTE, 0, mColors);
+		glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(Vertex), &mVertices[0].pos);
+		glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_VERTEX);
+		glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(Vertex), &mVertices[0].tex);
+		glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_TEXCOORD);
+		glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_COLOUR, 4, GL_UNSIGNED_BYTE, 0, 0, mColors);
+		glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_COLOUR);
 
 		glDrawArrays(GL_TRIANGLES, 0, 6 * 9);
-
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
 
 		glDisable(GL_TEXTURE_2D);
 		glDisable(GL_BLEND);
