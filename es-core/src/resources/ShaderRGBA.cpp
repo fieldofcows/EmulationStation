@@ -27,15 +27,15 @@ void main(void)													\
 ";
 
 static const char* fragment_shader =
-"																\
-varying vec2 		v_texcoord;									\
-varying vec4		v_colour;									\
-uniform sampler2D 	u_tex;										\
-																\
-void main()														\
-{																\
-    gl_FragColor = texture2D(u_tex, v_texcoord) * v_colour;		\
-}																\
+"																		\
+varying vec2 		v_texcoord;											\
+varying vec4		v_colour;											\
+uniform sampler2D 	u_tex;												\
+																		\
+void main()																\
+{																		\
+    gl_FragColor = texture2D(u_tex, v_texcoord) * v_colour;				\
+}																		\
 ";
 
 ShaderRGBA::ShaderRGBA() : Shader(), mVertex(0), mFragment(0),
@@ -67,15 +67,5 @@ void ShaderRGBA::texture(GLuint rgba)
 {
 	use();
 	glUniform1i(mUniformTexture, rgba);
-}
-
-void ShaderRGBA::colour(unsigned int rgba)
-{
-	use();
-	GLfloat val[4];
-	val[0] = (GLfloat)((rgba & 0xff000000) >> 24) / 255.0f;
-	val[1] = (GLfloat)((rgba & 0x00ff0000) >> 16) / 255.0f;
-	val[2] = (GLfloat)((rgba & 0x0000ff00) >> 8) / 255.0f;
-	val[3] = (GLfloat)((rgba & 0x000000ff)) / 255.0f;
 }
 

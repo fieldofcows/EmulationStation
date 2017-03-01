@@ -163,7 +163,7 @@ void NinePatchComponent::render(const Eigen::Affine3f& parentTrans)
 		glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_VERTEX);
 		glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(Vertex), &mVertices[0].tex);
 		glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_TEXCOORD);
-		glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_COLOUR, 4, GL_UNSIGNED_BYTE, 0, 0, mColors);
+		glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_COLOUR, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, mColors);
 		glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_COLOUR);
 
 		glDrawArrays(GL_TRIANGLES, 0, 6 * 9);
