@@ -54,4 +54,7 @@ void ShaderVector::init()
 
 	mUniformModelView = glGetUniformLocation(mProgram, "u_modelMatrix");
 	mUniformProjection = glGetUniformLocation(mProgram, "u_projectionMatrix");
+
+	ATTRIBUTE_VERTEX = glGetAttribLocation(mProgram, "a_position");
+	ATTRIBUTE_COLOUR = glGetAttribLocation(mProgram, "a_colour");
 }

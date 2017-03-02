@@ -371,11 +371,11 @@ void ComponentGrid::render(const Eigen::Affine3f& parentTrans)
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		glDisableVertexAttribArray(ShaderVector::ATTRIBUTE_COLOUR);
-		glVertexAttrib4f(ShaderVector::ATTRIBUTE_COLOUR, 0.7765f, 0.78f, 0.7765f, 1.0f);
+		glDisableVertexAttribArray(shader->ATTRIBUTE_COLOUR);
+		glVertexAttrib4f(shader->ATTRIBUTE_COLOUR, 0.7765f, 0.78f, 0.7765f, 1.0f);
 
-        glVertexAttribPointer(ShaderVector::ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, 0, &mLines[0].x);
-        glEnableVertexAttribArray(ShaderVector::ATTRIBUTE_VERTEX);
+        glVertexAttribPointer(shader->ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, 0, &mLines[0].x);
+        glEnableVertexAttribArray(shader->ATTRIBUTE_VERTEX);
 		glDrawArrays(GL_LINES, 0, mLines.size());
 
 		glDisable(GL_BLEND);

@@ -3,7 +3,7 @@
 //#define USE_OPENGL_DESKTOP
 
 #ifdef USE_OPENGL_ES
-	#define GLHEADER <GLES/gl.h>
+	#define GLHEADER <GLES2/gl.h>
 #endif
 
 #ifdef USE_OPENGL_DESKTOP

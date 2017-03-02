@@ -13,11 +13,6 @@
 class ShaderI420: public Shader
 {
 public:
-	enum {
-		ATTRIBUTE_VERTEX,
-		ATTRIBUTE_TEXCOORD,
-	};
-
 	ShaderI420();
 	virtual ~ShaderI420();
 
@@ -25,6 +20,9 @@ public:
 
 	void textures(GLuint y, GLuint u, GLuint v);
 	void fadeIn(float fade);
+
+	GLint ATTRIBUTE_VERTEX;
+	GLint ATTRIBUTE_TEXCOORD;
 
 private:
 	GLuint	mVertex;

@@ -42,7 +42,7 @@ endif()
 if(${GLSystem} MATCHES "Desktop OpenGL")
     find_package(OpenGL REQUIRED)
 else()
-    find_package(OpenGLES REQUIRED)
+    find_package(OpenGLES2 REQUIRED)
 endif()
 find_package(Freetype REQUIRED)
 find_package(FreeImage REQUIRED)
@@ -133,7 +133,7 @@ else()
         )
     else()
         LIST(APPEND COMMON_INCLUDE_DIRS
-            ${OPENGLES_INCLUDE_DIR}
+            ${OPENGLES2_INCLUDE_DIR}
         )
     endif()
 endif()
@@ -173,7 +173,7 @@ if(DEFINED BCMHOST)
     LIST(APPEND COMMON_LIBRARIES
         bcm_host
         EGL
-        ${OPENGLES_LIBRARIES}
+        ${OPENGLES2_LIBRARIES}
     )
 else()
     if(MSVC)
@@ -188,7 +188,7 @@ else()
     else()
         LIST(APPEND COMMON_LIBRARIES
             EGL
-            ${OPENGLES_LIBRARIES}
+            ${OPENGLES2_LIBRARIES}
         )
     endif()
 endif()

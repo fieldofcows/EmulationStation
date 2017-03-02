@@ -33,7 +33,7 @@ bool Shader::parseShader(std::string code, GLuint tp, GLuint* shaderObject)
 	// Create and compile the shader
 	length = code.size();
 	*shaderObject = glCreateShader(tp);
-	glShaderSource(*shaderObject, 1, &code_str, &length);
+	glShaderSource(*shaderObject, 1, (const GLchar**)&code_str, &length);
 	glCompileShader(*shaderObject);
 
 	// Check it compiled ok

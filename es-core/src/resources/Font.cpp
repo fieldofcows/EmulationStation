@@ -551,10 +551,10 @@ void Font::renderTextCache(TextCache* cache)
 
 		shader->colour(cache->mColor);
 
-        glVertexAttribPointer(ShaderFont::ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(TextCache::Vertex), it->verts[0].pos.data());
-        glEnableVertexAttribArray(ShaderFont::ATTRIBUTE_VERTEX);
-        glVertexAttribPointer(ShaderFont::ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(TextCache::Vertex), it->verts[0].tex.data());
-        glEnableVertexAttribArray(ShaderFont::ATTRIBUTE_TEXCOORD);
+        glVertexAttribPointer(shader->ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(TextCache::Vertex), it->verts[0].pos.data());
+        glEnableVertexAttribArray(shader->ATTRIBUTE_VERTEX);
+        glVertexAttribPointer(shader->ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(TextCache::Vertex), it->verts[0].tex.data());
+        glEnableVertexAttribArray(shader->ATTRIBUTE_TEXCOORD);
 
         glDrawArrays(GL_TRIANGLES, 0, it->verts.size());
 

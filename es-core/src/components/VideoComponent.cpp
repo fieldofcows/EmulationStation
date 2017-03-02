@@ -166,10 +166,10 @@ void VideoComponent::render(const Eigen::Affine3f& parentTrans)
 		shader->fadeIn(mFadeIn);
 
 		// Shader expects vertices and texture coords
-        glVertexAttribPointer(ShaderI420::ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(VideoVertex), &mVertices[0].pos);
-        glEnableVertexAttribArray(ShaderI420::ATTRIBUTE_VERTEX);
-        glVertexAttribPointer(ShaderI420::ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(VideoVertex), &mVertices[0].tex);
-        glEnableVertexAttribArray(ShaderI420::ATTRIBUTE_TEXCOORD);
+        glVertexAttribPointer(shader->ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(VideoVertex), &mVertices[0].pos);
+        glEnableVertexAttribArray(shader->ATTRIBUTE_VERTEX);
+        glVertexAttribPointer(shader->ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(VideoVertex), &mVertices[0].tex);
+        glEnableVertexAttribArray(shader->ATTRIBUTE_TEXCOORD);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		glDisable(GL_TEXTURE_2D);

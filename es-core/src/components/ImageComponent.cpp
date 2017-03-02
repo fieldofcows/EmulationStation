@@ -248,18 +248,18 @@ void ImageComponent::render(const Eigen::Affine3f& parentTrans)
 			fadeIn(mTexture->bind());
 
 			// Update the colour shift
-	        glDisableVertexAttribArray(ShaderRGBA::ATTRIBUTE_COLOUR);
-	        glVertexAttrib4f(ShaderRGBA::ATTRIBUTE_COLOUR, COLOR_INT_TO_GL_RED(mColorShift), COLOR_INT_TO_GL_GREEN(mColorShift),
+	        glDisableVertexAttribArray(shader->ATTRIBUTE_COLOUR);
+	        glVertexAttrib4f(shader->ATTRIBUTE_COLOUR, COLOR_INT_TO_GL_RED(mColorShift), COLOR_INT_TO_GL_GREEN(mColorShift),
 	        				  	  	  	  	  	  	  	   COLOR_INT_TO_GL_BLUE(mColorShift), COLOR_INT_TO_GL_ALPHA(mColorShift));
 
 			glEnable(GL_TEXTURE_2D);
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	        glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(Vertex), &mVertices[0].pos);
-	        glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_VERTEX);
-	        glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(Vertex), &mVertices[0].tex);
-	        glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_TEXCOORD);
+	        glVertexAttribPointer(shader->ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(Vertex), &mVertices[0].pos);
+	        glEnableVertexAttribArray(shader->ATTRIBUTE_VERTEX);
+	        glVertexAttribPointer(shader->ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(Vertex), &mVertices[0].tex);
+	        glEnableVertexAttribArray(shader->ATTRIBUTE_TEXCOORD);
 			glDrawArrays(GL_TRIANGLES, 0, 6);
 
 			glDisable(GL_TEXTURE_2D);

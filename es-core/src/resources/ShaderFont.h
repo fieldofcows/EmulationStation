@@ -13,11 +13,6 @@
 class ShaderFont: public Shader
 {
 public:
-	enum {
-		ATTRIBUTE_VERTEX,
-		ATTRIBUTE_TEXCOORD,
-	};
-
 	ShaderFont();
 	virtual ~ShaderFont();
 
@@ -25,6 +20,9 @@ public:
 
 	void texture(GLuint rgba);
 	void colour(unsigned rgba);
+
+	GLint ATTRIBUTE_VERTEX;
+	GLint ATTRIBUTE_TEXCOORD;
 
 private:
 	GLuint	mVertex;

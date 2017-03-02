@@ -69,6 +69,9 @@ void ShaderI420::init()
 	mUniformU = glGetUniformLocation(mProgram, "u_tex_u");
 	mUniformV = glGetUniformLocation(mProgram, "u_tex_v");
 	mUniformFade = glGetUniformLocation(mProgram, "u_fade");
+
+	ATTRIBUTE_VERTEX = glGetAttribLocation(mProgram, "a_position");
+	ATTRIBUTE_TEXCOORD = glGetAttribLocation(mProgram, "a_texcoord");
 }
 
 void ShaderI420::textures(GLuint y, GLuint u, GLuint v)

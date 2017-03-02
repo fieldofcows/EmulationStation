@@ -61,6 +61,9 @@ void ShaderFont::init()
 	mUniformProjection = glGetUniformLocation(mProgram, "u_projectionMatrix");
 	mUniformTexture = glGetUniformLocation(mProgram, "u_tex");
 	mUniformColour = glGetUniformLocation(mProgram, "u_colour");
+
+	ATTRIBUTE_VERTEX = glGetAttribLocation(mProgram, "a_position");
+	ATTRIBUTE_TEXCOORD = glGetAttribLocation(mProgram, "a_texcoord");
 }
 
 void ShaderFont::texture(GLuint rgba)

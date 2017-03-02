@@ -159,12 +159,12 @@ void NinePatchComponent::render(const Eigen::Affine3f& parentTrans)
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(Vertex), &mVertices[0].pos);
-		glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_VERTEX);
-		glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(Vertex), &mVertices[0].tex);
-		glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_TEXCOORD);
-		glVertexAttribPointer(ShaderRGBA::ATTRIBUTE_COLOUR, 4, GL_UNSIGNED_BYTE, 0, 0, mColors);
-		glEnableVertexAttribArray(ShaderRGBA::ATTRIBUTE_COLOUR);
+		glVertexAttribPointer(shader->ATTRIBUTE_VERTEX, 2, GL_FLOAT, 0, sizeof(Vertex), &mVertices[0].pos);
+		glEnableVertexAttribArray(shader->ATTRIBUTE_VERTEX);
+		glVertexAttribPointer(shader->ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, 0, sizeof(Vertex), &mVertices[0].tex);
+		glEnableVertexAttribArray(shader->ATTRIBUTE_TEXCOORD);
+		glVertexAttribPointer(shader->ATTRIBUTE_COLOUR, 4, GL_UNSIGNED_BYTE, 0, 0, mColors);
+		glEnableVertexAttribArray(shader->ATTRIBUTE_COLOUR);
 
 		glDrawArrays(GL_TRIANGLES, 0, 6 * 9);
 

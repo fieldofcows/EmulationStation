@@ -61,6 +61,10 @@ void ShaderRGBA::init()
 	mUniformModelView = glGetUniformLocation(mProgram, "u_modelMatrix");
 	mUniformProjection = glGetUniformLocation(mProgram, "u_projectionMatrix");
 	mUniformTexture = glGetUniformLocation(mProgram, "u_tex");
+
+	ATTRIBUTE_VERTEX = glGetAttribLocation(mProgram, "a_position");
+	ATTRIBUTE_TEXCOORD = glGetAttribLocation(mProgram, "a_texcoord");
+	ATTRIBUTE_COLOUR = glGetAttribLocation(mProgram, "a_colour");
 }
 
 void ShaderRGBA::texture(GLuint rgba)

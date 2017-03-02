@@ -13,15 +13,13 @@
 class ShaderVector: public Shader
 {
 public:
-	enum {
-		ATTRIBUTE_VERTEX,
-		ATTRIBUTE_COLOUR
-	};
-
 	ShaderVector();
 	virtual ~ShaderVector();
 
 	virtual void init();
+
+	GLint ATTRIBUTE_VERTEX;
+	GLint ATTRIBUTE_COLOUR;
 
 private:
 	GLuint	mVertex;

@@ -13,12 +13,6 @@
 class ShaderRGBA: public Shader
 {
 public:
-	enum {
-		ATTRIBUTE_VERTEX,
-		ATTRIBUTE_TEXCOORD,
-		ATTRIBUTE_COLOUR
-	};
-
 	ShaderRGBA();
 	virtual ~ShaderRGBA();
 
@@ -26,6 +20,10 @@ public:
 
 	void texture(GLuint rgba);
 	void colour(unsigned rgba);
+
+	GLint ATTRIBUTE_VERTEX;
+	GLint ATTRIBUTE_TEXCOORD;
+	GLint ATTRIBUTE_COLOUR;
 
 private:
 	GLuint	mVertex;
