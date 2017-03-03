@@ -19,7 +19,6 @@ public:
 	virtual void init();
 
 	void texture(GLuint rgba);
-	void colour(unsigned rgba);
 
 	GLint ATTRIBUTE_VERTEX;
 	GLint ATTRIBUTE_TEXCOORD;
@@ -28,7 +27,6 @@ public:
 private:
 	GLuint	mVertex;
 	GLuint	mFragment;
-	GLint	mUniformColour;
 	GLint	mUniformTexture;
 };
 
