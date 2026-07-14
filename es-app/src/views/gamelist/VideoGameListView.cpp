@@ -1,60 +1,83 @@
 #include "views/gamelist/VideoGameListView.h"
-#include "views/ViewController.h"
-#include "Window.h"
+
 #include "animations/LambdaAnimation.h"
-#include <sys/stat.h>
-#include <fcntl.h>
+#ifdef _OMX_
+#include "components/VideoPlayerComponent.h"
+#endif
+#include "components/VideoVlcComponent.h"
+#include "utils/FileSystemUtil.h"
+#include "views/ViewController.h"
+#ifdef _OMX_
+#include "Settings.h"
+#endif
 
 VideoGameListView::VideoGameListView(Window* window, FileData* root) :
-	BasicGameListView(window, root), 
-	mDescContainer(window), mDescription(window), 
+	BasicGameListView(window, root),
+	mDescContainer(window, DESCRIPTION_SCROLL_DELAY), mDescription(window),
+	mThumbnail(window),
 	mMarquee(window),
 	mImage(window),
-	mVideo(window),
+	mVideo(nullptr),
 	mVideoPlaying(false),
 
-	mLblRating(window), mLblReleaseDate(window), mLblDeveloper(window), mLblPublisher(window), 
+	mLblRating(window), mLblReleaseDate(window), mLblDeveloper(window), mLblPublisher(window),
 	mLblGenre(window), mLblPlayers(window), mLblLastPlayed(window), mLblPlayCount(window),
 
-	mRating(window), mReleaseDate(window), mDeveloper(window), mPublisher(window), 
-	mGenre(window), mPlayers(window), mLastPlayed(window), mPlayCount(window)
+	mRating(window), mReleaseDate(window), mDeveloper(window), mPublisher(window),
+	mGenre(window), mPlayers(window), mLastPlayed(window), mPlayCount(window),
+	mName(window)
 {
 	const float padding = 0.01f;
+
+	// Create the correct type of video window
+#ifdef _OMX_
+	Utils::FileSystem::removeFile(getTitlePath());
+	if (Settings::getInstance()->getBool("VideoOmxPlayer"))
+		mVideo = new VideoPlayerComponent(window, "");
+	else
+		mVideo = new VideoVlcComponent(window, getTitlePath());
+#else
+	mVideo = new VideoVlcComponent(window, getTitlePath());
+#endif
 
 	mList.setPosition(mSize.x() * (0.50f + padding), mList.getPosition().y());
 	mList.setSize(mSize.x() * (0.50f - padding), mList.getSize().y());
 	mList.setAlignment(TextListComponent<FileData*>::ALIGN_LEFT);
-	mList.setCursorChangedCallback([&](const CursorState& state) { updateInfoPanel(); });
-
-	// Marquee
-	mMarquee.setOrigin(0.5f, 0.5f);
-	mMarquee.setPosition(mSize.x() * 0.25f, mSize.y() * 0.10f);
-	mMarquee.setMaxSize(mSize.x() * (0.5f - 2*padding), mSize.y() * 0.18f);
-	addChild(&mMarquee);
+	mList.setCursorChangedCallback([&](const CursorState& /*state*/) { updateInfoPanel(); });
 
 	// Image
-	mImage.setOrigin(0.5f, 0.5f);
 	// Default to off the screen
+	mImage.setOrigin(0.5f, 0.5f);
 	mImage.setPosition(2.0f, 2.0f);
-	mImage.setMaxSize(1.0f, 1.0f);
+	mImage.setMaxSize(mSize.x(), mSize.y());
+	mImage.setDefaultZIndex(30);
+	mImage.setVisible(false);
 	addChild(&mImage);
 
-	// video
-	mVideo.setOrigin(0.5f, 0.5f);
-	mVideo.setPosition(mSize.x() * 0.25f, mSize.y() * 0.4f);
-	mVideo.setSize(mSize.x() * (0.5f - 2*padding), mSize.y() * 0.4f);
-	addChild(&mVideo);
+	// Video
+	mVideo->setOrigin(0.5f, 0.5f);
+	mVideo->setPosition(mSize.x() * 0.25f, mSize.y() * 0.4f);
+	mVideo->setSize(mSize.x() * (0.5f - 2*padding), mSize.y() * 0.4f);
+	mVideo->setDefaultZIndex(30);
+	addChild(mVideo);
 
-	// We want the video to be in front of the background but behind any 'extra' images
-	for (std::vector<GuiComponent*>::iterator it = mChildren.begin(); it != mChildren.end(); ++it)
-	{
-		if (*it == &mThemeExtras)
-		{
-			mChildren.insert(it, &mVideo);
-			mChildren.pop_back();
-			break;
-		}
-	}
+	// Thumbnail
+	// Default to off the screen
+	mThumbnail.setOrigin(0.5f, 0.5f);
+	mThumbnail.setPosition(2.0f, 2.0f);
+	mThumbnail.setMaxSize(mSize.x(), mSize.y());
+	mThumbnail.setDefaultZIndex(35);
+	mThumbnail.setVisible(false);
+	addChild(&mThumbnail);
+
+	// Marquee
+	// Default to off the screen
+	mMarquee.setOrigin(0.5f, 0.5f);
+	mMarquee.setPosition(2.0f, 2.0f);
+	mMarquee.setMaxSize(mSize.x(), mSize.y());
+	mMarquee.setDefaultZIndex(35);
+	mImage.setVisible(false);
+	addChild(&mMarquee);
 
 	// metadata labels + values
 	mLblRating.setText("Rating: ");
@@ -77,15 +100,23 @@ VideoGameListView::VideoGameListView(Window* window, FileData* root) :
 	addChild(&mPlayers);
 	mLblLastPlayed.setText("Last played: ");
 	addChild(&mLblLastPlayed);
-	mLastPlayed.setDisplayMode(DateTimeComponent::DISP_RELATIVE_TO_NOW);
+	mLastPlayed.setDisplayRelative(true);
 	addChild(&mLastPlayed);
 	mLblPlayCount.setText("Times played: ");
 	addChild(&mLblPlayCount);
 	addChild(&mPlayCount);
 
+	mName.setPosition(mSize.x(), mSize.y());
+	mName.setDefaultZIndex(40);
+	mName.setColor(0xAAAAAAFF);
+	mName.setFont(Font::get(FONT_SIZE_MEDIUM));
+	mName.setHorizontalAlignment(ALIGN_CENTER);
+	addChild(&mName);
+
 	mDescContainer.setPosition(mSize.x() * padding, mSize.y() * 0.65f);
 	mDescContainer.setSize(mSize.x() * (0.50f - 2*padding), mSize.y() - mDescContainer.getPosition().y());
 	mDescContainer.setAutoScroll(true);
+	mDescContainer.setDefaultZIndex(40);
 	addChild(&mDescContainer);
 
 	mDescription.setFont(Font::get(FONT_SIZE_SMALL));
@@ -94,11 +125,11 @@ VideoGameListView::VideoGameListView(Window* window, FileData* root) :
 
 	initMDLabels();
 	initMDValues();
-	updateInfoPanel();
 }
 
 VideoGameListView::~VideoGameListView()
 {
+	delete mVideo;
 }
 
 void VideoGameListView::onThemeChanged(const std::shared_ptr<ThemeData>& theme)
@@ -106,9 +137,11 @@ void VideoGameListView::onThemeChanged(const std::shared_ptr<ThemeData>& theme)
 	BasicGameListView::onThemeChanged(theme);
 
 	using namespace ThemeFlags;
-	mMarquee.applyTheme(theme, getName(), "md_marquee", POSITION | ThemeFlags::SIZE);
-	mImage.applyTheme(theme, getName(), "md_image", POSITION | ThemeFlags::SIZE);
-	mVideo.applyTheme(theme, getName(), "md_video", POSITION | ThemeFlags::SIZE | ThemeFlags::DELAY);
+	mThumbnail.applyTheme(theme, getName(), "md_thumbnail", POSITION | ThemeFlags::SIZE | Z_INDEX | ROTATION | VISIBLE);
+	mMarquee.applyTheme(theme, getName(), "md_marquee", POSITION | ThemeFlags::SIZE | Z_INDEX | ROTATION | VISIBLE);
+	mImage.applyTheme(theme, getName(), "md_image", POSITION | ThemeFlags::SIZE | Z_INDEX | ROTATION | VISIBLE);
+	mVideo->applyTheme(theme, getName(), "md_video", POSITION | ThemeFlags::SIZE | ThemeFlags::DELAY | Z_INDEX | ROTATION | VISIBLE);
+	mName.applyTheme(theme, getName(), "md_name", ALL);
 
 	initMDLabels();
 	std::vector<TextComponent*> labels = getMDLabels();
@@ -137,22 +170,22 @@ void VideoGameListView::onThemeChanged(const std::shared_ptr<ThemeData>& theme)
 		values[i]->applyTheme(theme, getName(), valElements[i], ALL ^ ThemeFlags::TEXT);
 	}
 
-	mDescContainer.applyTheme(theme, getName(), "md_description", POSITION | ThemeFlags::SIZE);
+	mDescContainer.applyTheme(theme, getName(), "md_description", POSITION | ThemeFlags::SIZE | Z_INDEX | VISIBLE);
 	mDescription.setSize(mDescContainer.getSize().x(), 0);
-	mDescription.applyTheme(theme, getName(), "md_description", ALL ^ (POSITION | ThemeFlags::SIZE | TEXT));
+	mDescription.applyTheme(theme, getName(), "md_description", ALL ^ (POSITION | ThemeFlags::SIZE | ThemeFlags::ORIGIN | TEXT | ROTATION));
+
+	sortChildren();
 }
 
 void VideoGameListView::initMDLabels()
 {
-	using namespace Eigen;
-
 	std::vector<TextComponent*> components = getMDLabels();
 
 	const unsigned int colCount = 2;
-	const unsigned int rowCount = components.size() / 2;
+	const unsigned int rowCount = (int)(components.size() / 2);
 
 	Vector3f start(mSize.x() * 0.01f, mSize.y() * 0.625f, 0.0f);
-	
+
 	const float colSize = (mSize.x() * 0.48f) / colCount;
 	const float rowPadding = 0.01f * mSize.y();
 
@@ -171,13 +204,12 @@ void VideoGameListView::initMDLabels()
 
 		components[i]->setFont(Font::get(FONT_SIZE_SMALL));
 		components[i]->setPosition(pos);
+		components[i]->setDefaultZIndex(40);
 	}
 }
 
 void VideoGameListView::initMDValues()
 {
-	using namespace Eigen;
-
 	std::vector<TextComponent*> labels = getMDLabels();
 	std::vector<GuiComponent*> values = getMDValues();
 
@@ -199,6 +231,7 @@ void VideoGameListView::initMDValues()
 		const float heightDiff = (labels[i]->getSize().y() - values[i]->getSize().y()) / 2;
 		values[i]->setPosition(labels[i]->getPosition() + Vector3f(labels[i]->getSize().x(), heightDiff, 0));
 		values[i]->setSize(colSize - labels[i]->getSize().x(), values[i]->getSize().y());
+		values[i]->setDefaultZIndex(40);
 
 		float testBot = values[i]->getPosition().y() + values[i]->getSize().y();
 		if(testBot > bottom)
@@ -218,83 +251,68 @@ void VideoGameListView::updateInfoPanel()
 	bool fadingOut;
 	if(file == NULL)
 	{
-		mVideo.setVideo("");
-		mVideo.setImage("");
+		mVideo->setVideo("");
+		mVideo->setImage("");
 		mVideoPlaying = false;
 		//mMarquee.setImage("");
 		//mDescription.setText("");
 		fadingOut = true;
 
 	}else{
-		std::string				video_path;
-		std::string				marquee_path;
-		std::string				thumbnail_path;
-		video_path 			= file->getVideoPath();
-		marquee_path 		= file->getMarqueePath();
-		thumbnail_path 		= file->getThumbnailPath();
-
-		if	(!video_path.empty() && (video_path[0] == '~'))
+		if (!mVideo->setVideo(file->getVideoPath()))
 		{
-			video_path.erase(0, 1);
-			video_path.insert(0, getHomePath());
+			mVideo->setDefaultVideo();
 		}
-		if	(!marquee_path.empty() && (marquee_path[0] == '~'))
-		{
-			marquee_path.erase(0, 1);
-			marquee_path.insert(0, getHomePath());
-		}
-		if (!thumbnail_path.empty() && (thumbnail_path[0] == '~'))
-		{
-			thumbnail_path.erase(0, 1);
-			thumbnail_path.insert(0, getHomePath());
-		}
-		if (!mVideo.setVideo(video_path))
-			mVideo.setDefaultVideo();
 		mVideoPlaying = true;
 
-		mVideo.setImage(thumbnail_path);
-		mMarquee.setImage(marquee_path);
-		mImage.setImage(thumbnail_path);
+		mVideo->setImageAsync(file->getThumbnailPath());
+		mThumbnail.setImageAsync(file->getThumbnailPath());
+		mMarquee.setImageAsync(file->getMarqueePath());
+		mImage.setImageAsync(file->getImagePath());
 
 		mDescription.setText(file->metadata.get("desc"));
 		mDescContainer.reset();
 
+		mRating.setValue(file->metadata.get("rating"));
+		mReleaseDate.setValue(file->metadata.get("releasedate"));
+		mDeveloper.setValue(file->metadata.get("developer"));
+		mPublisher.setValue(file->metadata.get("publisher"));
+		mGenre.setValue(file->metadata.get("genre"));
+		mPlayers.setValue(file->metadata.get("players"));
+		mName.setValue(file->metadata.get("name"));
+
 		if(file->getType() == GAME)
 		{
-			mRating.setValue(file->metadata.get("rating"));
-			mReleaseDate.setValue(file->metadata.get("releasedate"));
-			mDeveloper.setValue(file->metadata.get("developer"));
-			mPublisher.setValue(file->metadata.get("publisher"));
-			mGenre.setValue(file->metadata.get("genre"));
-			mPlayers.setValue(file->metadata.get("players"));
 			mLastPlayed.setValue(file->metadata.get("lastplayed"));
 			mPlayCount.setValue(file->metadata.get("playcount"));
 		}
-		
+
 		fadingOut = false;
 	}
 
 	std::vector<GuiComponent*> comps = getMDValues();
+	comps.push_back(&mThumbnail);
 	comps.push_back(&mMarquee);
-	comps.push_back(&mVideo);
+	comps.push_back(mVideo);
 	comps.push_back(&mDescription);
 	comps.push_back(&mImage);
+	comps.push_back(&mName);
 	std::vector<TextComponent*> labels = getMDLabels();
-	comps.insert(comps.end(), labels.begin(), labels.end());
+	comps.insert(comps.cend(), labels.cbegin(), labels.cend());
 
-	for(auto it = comps.begin(); it != comps.end(); it++)
+	for(auto it = comps.cbegin(); it != comps.cend(); it++)
 	{
 		GuiComponent* comp = *it;
 		// an animation is playing
 		//   then animate if reverse != fadingOut
 		// an animation is not playing
 		//   then animate if opacity != our target opacity
-		if((comp->isAnimationPlaying(0) && comp->isAnimationReversed(0) != fadingOut) || 
+		if((comp->isAnimationPlaying(0) && comp->isAnimationReversed(0) != fadingOut) ||
 			(!comp->isAnimationPlaying(0) && comp->getOpacity() != (fadingOut ? 0 : 255)))
 		{
 			auto func = [comp](float t)
 			{
-				comp->setOpacity((unsigned char)(lerp<float>(0.0f, 1.0f, t)*255));
+				comp->setOpacity((unsigned char)(Math::lerp(0.0f, 1.0f, t)*255));
 			};
 			comp->setAnimation(new LambdaAnimation(func, 150), 0, nullptr, fadingOut);
 		}
@@ -303,9 +321,40 @@ void VideoGameListView::updateInfoPanel()
 
 void VideoGameListView::launch(FileData* game)
 {
-	Eigen::Vector3f target(Renderer::getScreenWidth() / 2.0f, Renderer::getScreenHeight() / 2.0f, 0);
-	if(mMarquee.hasImage())
-		target << mVideo.getCenter().x(), mVideo.getCenter().y(), 0;
+	float screenWidth = (float) Renderer::getScreenWidth();
+	float screenHeight = (float) Renderer::getScreenHeight();
+
+	Vector3f target(screenWidth / 2.0f, screenHeight / 2.0f, 0);
+
+	if(mMarquee.hasImage() &&
+		(mMarquee.getPosition().x() < screenWidth && mMarquee.getPosition().x() > 0.0f &&
+		 mMarquee.getPosition().y() < screenHeight && mMarquee.getPosition().y() > 0.0f))
+	{
+		target = Vector3f(mMarquee.getCenter().x(), mMarquee.getCenter().y(), 0);
+	}
+	else if(mThumbnail.hasImage() &&
+		(mThumbnail.getPosition().x() < screenWidth && mThumbnail.getPosition().x() > 2.0f &&
+		 mThumbnail.getPosition().y() < screenHeight && mThumbnail.getPosition().y() > 2.0f))
+	{
+		target = Vector3f(mThumbnail.getCenter().x(), mThumbnail.getCenter().y(), 0);
+	}
+	else if(mImage.hasImage() &&
+		(mImage.getPosition().x() < screenWidth && mImage.getPosition().x() > 2.0f &&
+		 mImage.getPosition().y() < screenHeight && mImage.getPosition().y() > 2.0f))
+	{
+		target = Vector3f(mImage.getCenter().x(), mImage.getCenter().y(), 0);
+	}
+	else if(mHeaderImage.hasImage() &&
+		(mHeaderImage.getPosition().x() < screenWidth && mHeaderImage.getPosition().x() > 0.0f &&
+		 mHeaderImage.getPosition().y() < screenHeight && mHeaderImage.getPosition().y() > 0.0f))
+	{
+		target = Vector3f(mHeaderImage.getCenter().x(), mHeaderImage.getCenter().y(), 0);
+	}
+	else if(mVideo->getPosition().x() < screenWidth && mVideo->getPosition().x() > 0.0f &&
+		 mVideo->getPosition().y() < screenHeight && mVideo->getPosition().y() > 0.0f)
+	{
+		target = Vector3f(mVideo->getCenter().x(), mVideo->getCenter().y(), 0);
+	}
 
 	ViewController::get()->launch(game, target);
 }
@@ -341,5 +390,16 @@ std::vector<GuiComponent*> VideoGameListView::getMDValues()
 void VideoGameListView::update(int deltaTime)
 {
 	BasicGameListView::update(deltaTime);
-	mVideo.update(deltaTime);
+	mVideo->update(deltaTime);
+}
+
+void VideoGameListView::onShow()
+{
+	GuiComponent::onShow();
+	updateInfoPanel();
+}
+
+void VideoGameListView::onFocusLost() {
+	mDescContainer.reset();
+	mList.stopScrolling(true);
 }

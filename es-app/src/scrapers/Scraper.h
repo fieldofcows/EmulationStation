@@ -1,14 +1,20 @@
 #pragma once
+#ifndef ES_APP_SCRAPERS_SCRAPER_H
+#define ES_APP_SCRAPERS_SCRAPER_H
 
-#include "MetaData.h"
-#include "SystemData.h"
-#include "HttpReq.h"
 #include "AsyncHandle.h"
-#include <vector>
+#include "HttpReq.h"
+#include "MetaData.h"
 #include <functional>
+#include <memory>
 #include <queue>
+#include <utility>
+#include <assert.h>
 
 #define MAX_SCRAPER_RESULTS 7
+
+class FileData;
+class SystemData;
 
 struct ScraperSearchParams
 {
@@ -25,6 +31,9 @@ struct ScraperSearchResult
 	MetaDataList mdl;
 	std::string imageUrl;
 	std::string thumbnailUrl;
+
+	// Needed to pre-set the image type
+	std::string imageType;
 };
 
 // So let me explain why I've abstracted this so heavily.
@@ -44,8 +53,8 @@ struct ScraperSearchResult
 
 // We could do this if we used threads.  Right now ES doesn't because I'm pretty sure I'll fuck it up,
 // and I'm not sure of the performance of threads on the Pi (single-core ARM).
-// We could also do this if we used coroutines.  
-// I can't find a really good cross-platform coroutine library (x86/64/ARM Linux + Windows), 
+// We could also do this if we used coroutines.
+// I can't find a really good cross-platform coroutine library (x86/64/ARM Linux + Windows),
 // and I don't want to spend more time chasing libraries than just writing it the long way once.
 
 // So, I did it the "long" way.
@@ -62,7 +71,7 @@ public:
 
 	// returns "true" once we're done
 	virtual void update() = 0;
-	
+
 protected:
 	std::vector<ScraperSearchResult>& mResults;
 };
@@ -103,6 +112,9 @@ std::unique_ptr<ScraperSearchHandle> startScraperSearch(const ScraperSearchParam
 
 // returns a list of valid scraper names
 std::vector<std::string> getScraperList();
+
+// returns true if the scraper configured in the settings is still valid
+bool isValidConfiguredScraper();
 
 typedef void (*generate_scraper_requests_func)(const ScraperSearchParams& params, std::queue< std::unique_ptr<ScraperRequest> >& requests, std::vector<ScraperSearchResult>& results);
 
@@ -154,3 +166,5 @@ std::unique_ptr<MDResolveHandle> resolveMetaDataAssets(const ScraperSearchResult
 //Will overwrite the image at [path] with the new resized one.
 //Returns true if successful, false otherwise.
 bool resizeImage(const std::string& path, int maxWidth, int maxHeight);
+
+#endif // ES_APP_SCRAPERS_SCRAPER_H

@@ -1,8 +1,10 @@
 #pragma once
+#ifndef ES_APP_GUIS_GUI_GAME_SCRAPER_H
+#define ES_APP_GUIS_GUI_GAME_SCRAPER_H
 
-#include "GuiComponent.h"
-#include "components/ScraperSearchComponent.h"
 #include "components/NinePatchComponent.h"
+#include "components/ScraperSearchComponent.h"
+#include "GuiComponent.h"
 
 class GuiGameScraper : public GuiComponent
 {
@@ -12,7 +14,7 @@ public:
 	void onSizeChanged() override;
 
 	bool input(InputConfig* config, Input input) override;
-	void update(int deltaTime);
+	void update(int deltaTime) override;
 	virtual std::vector<HelpPrompt> getHelpPrompts() override;
 
 private:
@@ -31,3 +33,5 @@ private:
 
 	std::function<void()> mCancelFunc;
 };
+
+#endif // ES_APP_GUIS_GUI_GAME_SCRAPER_H

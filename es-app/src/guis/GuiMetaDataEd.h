@@ -1,18 +1,23 @@
 #pragma once
+#ifndef ES_APP_GUIS_GUI_META_DATA_ED_H
+#define ES_APP_GUIS_GUI_META_DATA_ED_H
 
-#include "GuiComponent.h"
-#include "components/MenuComponent.h"
-#include "MetaData.h"
+#include "components/ComponentGrid.h"
+#include "components/NinePatchComponent.h"
 #include "scrapers/Scraper.h"
+#include "GuiComponent.h"
+#include "MetaData.h"
 
-#include <functional>
+
+class ComponentList;
+class TextComponent;
 
 class GuiMetaDataEd : public GuiComponent
 {
 public:
-	GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector<MetaDataDecl>& mdd, ScraperSearchParams params, 
+	GuiMetaDataEd(Window* window, MetaDataList* md, const std::vector<MetaDataDecl>& mdd, ScraperSearchParams params,
 		const std::string& header, std::function<void()> savedCallback, std::function<void()> deleteFunc);
-	
+
 	bool input(InputConfig* config, Input input) override;
 	void onSizeChanged() override;
 	virtual std::vector<HelpPrompt> getHelpPrompts() override;
@@ -22,10 +27,12 @@ private:
 	void fetch();
 	void fetchDone(const ScraperSearchResult& result);
 	void close(bool closeAllWindows);
+	bool hasChanges();
+	float to_float(const std::string& str, bool& ok);
 
 	NinePatchComponent mBackground;
 	ComponentGrid mGrid;
-	
+
 	std::shared_ptr<TextComponent> mTitle;
 	std::shared_ptr<TextComponent> mSubtitle;
 	std::shared_ptr<ComponentGrid> mHeaderGrid;
@@ -41,3 +48,5 @@ private:
 	std::function<void()> mSavedCallback;
 	std::function<void()> mDeleteFunc;
 };
+
+#endif // ES_APP_GUIS_GUI_META_DATA_ED_H

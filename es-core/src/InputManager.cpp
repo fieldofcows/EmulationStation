@@ -1,13 +1,18 @@
 #include "InputManager.h"
-#include "InputConfig.h"
-#include "Settings.h"
-#include "Window.h"
+
+#include "utils/FileSystemUtil.h"
+#include "CECInput.h"
 #include "Log.h"
-#include "pugixml/pugixml.hpp"
-#include <boost/filesystem.hpp>
 #include "platform.h"
+#include "Scripting.h"
+#include "Window.h"
+#include <pugixml.hpp>
+#include <SDL.h>
+#include <iostream>
+#include <assert.h>
 
 #define KEYBOARD_GUID_STRING "-1"
+#define CEC_GUID_STRING      "-2"
 
 // SO HEY POTENTIAL POOR SAP WHO IS TRYING TO MAKE SENSE OF ALL THIS (by which I mean my future self)
 // There are like four distinct IDs used for joysticks (crazy, right?)
@@ -15,12 +20,14 @@
 //    It can change even if the device is the same, and is only used to open joysticks (required to receive SDL events).
 // 2. SDL_JoystickID - this is an ID for each joystick that is supposed to remain consistent between plugging and unplugging.
 //    ES doesn't care if it does, though.
-// 3. "Device ID" - this is something I made up and is what InputConfig's getDeviceID() returns.  
+// 3. "Device ID" - this is something I made up and is what InputConfig's getDeviceID() returns.
 //    This is actually just an SDL_JoystickID (also called instance ID), but -1 means "keyboard" instead of "error."
 // 4. Joystick GUID - this is some squashed version of joystick vendor, version, and a bunch of other device-specific things.
 //    It should remain the same across runs of the program/system restarts/device reordering and is what I use to identify which joystick to load.
 
-namespace fs = boost::filesystem;
+// hack for cec support
+int SDL_USER_CECBUTTONDOWN = -1;
+int SDL_USER_CECBUTTONUP   = -1;
 
 InputManager* InputManager::mInstance = NULL;
 
@@ -46,8 +53,15 @@ void InputManager::init()
 	if(initialized())
 		deinit();
 
-	SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, 
+	SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS,
 		Settings::getInstance()->getBool("BackgroundJoystickInput") ? "1" : "0");
+	// Don't enable the HIDAPI drivers by default, it will break the existing configurations
+	// for a few controller types, since the names and the input mappings are different.
+#if !defined(_WIN32)
+#if	SDL_VERSION_ATLEAST(2,0,9)
+	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI, "0");
+#endif
+#endif
 	SDL_InitSubSystem(SDL_INIT_JOYSTICK);
 	SDL_JoystickEventState(SDL_ENABLE);
 
@@ -60,12 +74,19 @@ void InputManager::init()
 
 	mKeyboardInputConfig = new InputConfig(DEVICE_KEYBOARD, "Keyboard", KEYBOARD_GUID_STRING);
 	loadInputConfig(mKeyboardInputConfig);
+
+	SDL_USER_CECBUTTONDOWN = SDL_RegisterEvents(2);
+	SDL_USER_CECBUTTONUP   = SDL_USER_CECBUTTONDOWN + 1;
+	CECInput::init();
+	mCECInputConfig = new InputConfig(DEVICE_CEC, "CEC", CEC_GUID_STRING);
+	loadInputConfig(mCECInputConfig);
 }
 
 void InputManager::addJoystickByDeviceIndex(int id)
 {
-	assert(id >= 0 && id < SDL_NumJoysticks());
-	
+	assert(id > -1);
+	assert(id < SDL_NumJoysticks());
+
 	// open joystick & add to our list
 	SDL_Joystick* joy = SDL_JoystickOpen(id);
 	assert(joy);
@@ -79,11 +100,16 @@ void InputManager::addJoystickByDeviceIndex(int id)
 
 	// create the InputConfig
 	mInputConfigs[joyId] = new InputConfig(joyId, SDL_JoystickName(joy), guid);
+
+	// add Vendor and Product IDs
+	mInputConfigs[joyId]->setVendorId(SDL_JoystickGetVendor(joy));
+	mInputConfigs[joyId]->setProductId(SDL_JoystickGetProduct(joy));
+
 	if(!loadInputConfig(mInputConfigs[joyId]))
 	{
-		LOG(LogInfo) << "Added unconfigured joystick " << SDL_JoystickName(joy) << " (GUID: " << guid << ", instance ID: " << joyId << ", device index: " << id << ").";
+		LOG(LogInfo) << "Added unconfigured joystick '" << SDL_JoystickName(joy) << "' (GUID: " << guid << ", instance ID: " << joyId << ", device index: " << id << ").";
 	}else{
-		LOG(LogInfo) << "Added known joystick " << SDL_JoystickName(joy) << " (instance ID: " << joyId << ", device index: " << id << ")";
+		LOG(LogInfo) << "Added known joystick '" << SDL_JoystickName(joy) << "' (instance ID: " << joyId << ", device index: " << id << ")";
 	}
 
 	// set up the prevAxisValues
@@ -108,13 +134,9 @@ void InputManager::removeJoystickByJoystickID(SDL_JoystickID joyId)
 
 	// close the joystick
 	auto joyIt = mJoysticks.find(joyId);
-	if(joyIt != mJoysticks.end())
-	{
-		SDL_JoystickClose(joyIt->second);
-		mJoysticks.erase(joyIt);
-	}else{
-		LOG(LogError) << "Could not find joystick to close (instance ID: " << joyId << ")";
-	}
+	LOG(LogInfo) << "Removed joystick '" << SDL_JoystickName(joyIt->second) << "' (instance ID: " << joyId << ")";
+	SDL_JoystickClose(joyIt->second);
+	mJoysticks.erase(joyIt);
 }
 
 void InputManager::deinit()
@@ -122,19 +144,19 @@ void InputManager::deinit()
 	if(!initialized())
 		return;
 
-	for(auto iter = mJoysticks.begin(); iter != mJoysticks.end(); iter++)
+	for(auto iter = mJoysticks.cbegin(); iter != mJoysticks.cend(); iter++)
 	{
 		SDL_JoystickClose(iter->second);
 	}
 	mJoysticks.clear();
 
-	for(auto iter = mInputConfigs.begin(); iter != mInputConfigs.end(); iter++)
+	for(auto iter = mInputConfigs.cbegin(); iter != mInputConfigs.cend(); iter++)
 	{
 		delete iter->second;
 	}
 	mInputConfigs.clear();
 
-	for(auto iter = mPrevAxisValues.begin(); iter != mPrevAxisValues.end(); iter++)
+	for(auto iter = mPrevAxisValues.cbegin(); iter != mPrevAxisValues.cend(); iter++)
 	{
 		delete[] iter->second;
 	}
@@ -146,15 +168,35 @@ void InputManager::deinit()
 		mKeyboardInputConfig = NULL;
 	}
 
+	if(mCECInputConfig != NULL)
+	{
+		delete mCECInputConfig;
+		mCECInputConfig = NULL;
+	}
+
+	CECInput::deinit();
+
 	SDL_JoystickEventState(SDL_DISABLE);
 	SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
 }
 
-int InputManager::getNumJoysticks() { return mJoysticks.size(); }
+int InputManager::getNumJoysticks() { return (int)mJoysticks.size(); }
+
+int InputManager::getAxisCountByDevice(SDL_JoystickID id)
+{
+	return SDL_JoystickNumAxes(mJoysticks[id]);
+}
+
 int InputManager::getButtonCountByDevice(SDL_JoystickID id)
 {
 	if(id == DEVICE_KEYBOARD)
 		return 120; //it's a lot, okay.
+	else if(id == DEVICE_CEC)
+#ifdef HAVE_CECLIB
+		return CEC::CEC_USER_CONTROL_CODE_MAX;
+#else // HAVE_LIBCEF
+		return 0;
+#endif // HAVE_CECLIB
 	else
 		return SDL_JoystickNumButtons(mJoysticks[id]);
 }
@@ -163,6 +205,8 @@ InputConfig* InputManager::getInputConfigByDevice(int device)
 {
 	if(device == DEVICE_KEYBOARD)
 		return mKeyboardInputConfig;
+	else if(device == DEVICE_CEC)
+		return mCECInputConfig;
 	else
 		return mInputConfigs[device];
 }
@@ -238,15 +282,21 @@ bool InputManager::parseEvent(const SDL_Event& ev, Window* window)
 		return false;
 	}
 
+	if((ev.type == (unsigned int)SDL_USER_CECBUTTONDOWN) || (ev.type == (unsigned int)SDL_USER_CECBUTTONUP))
+	{
+		window->input(getInputConfigByDevice(DEVICE_CEC), Input(DEVICE_CEC, TYPE_CEC_BUTTON, ev.user.code, ev.type == (unsigned int)SDL_USER_CECBUTTONDOWN, false));
+		return true;
+	}
+
 	return false;
 }
 
 bool InputManager::loadInputConfig(InputConfig* config)
 {
 	std::string path = getConfigPath();
-	if(!fs::exists(path))
+	if(!Utils::FileSystem::exists(path))
 		return false;
-	
+
 	pugi::xml_document doc;
 	pugi::xml_parse_result res = doc.load_file(path.c_str());
 
@@ -287,8 +337,8 @@ void InputManager::loadDefaultKBConfig()
 	cfg->mapInput("start", Input(DEVICE_KEYBOARD, TYPE_KEY, SDLK_F1, 1, true));
 	cfg->mapInput("select", Input(DEVICE_KEYBOARD, TYPE_KEY, SDLK_F2, 1, true));
 
-	cfg->mapInput("leftbottom", Input(DEVICE_KEYBOARD, TYPE_KEY, SDLK_RIGHTBRACKET, 1, true));
-	cfg->mapInput("rightbottom", Input(DEVICE_KEYBOARD, TYPE_KEY, SDLK_LEFTBRACKET, 1, true));
+	cfg->mapInput("leftshoulder", Input(DEVICE_KEYBOARD, TYPE_KEY, SDLK_LEFTBRACKET, 1, true));
+	cfg->mapInput("rightshoulder", Input(DEVICE_KEYBOARD, TYPE_KEY, SDLK_RIGHTBRACKET, 1, true));
 }
 
 void InputManager::writeDeviceConfig(InputConfig* config)
@@ -299,7 +349,7 @@ void InputManager::writeDeviceConfig(InputConfig* config)
 
 	pugi::xml_document doc;
 
-	if(fs::exists(path))
+	if(Utils::FileSystem::exists(path))
 	{
 		// merge files
 		pugi::xml_parse_result result = doc.load_file(path.c_str());
@@ -321,7 +371,6 @@ void InputManager::writeDeviceConfig(InputConfig* config)
 					path = getTemporaryConfigPath();
 					doc.reset();
 					root = doc.append_child("inputList");
-					root.append_copy(actionnode);
 				}
 				else
 				{
@@ -348,7 +397,10 @@ void InputManager::writeDeviceConfig(InputConfig* config)
 
 	config->writeToXML(root);
 	doc.save_file(path.c_str());
-	
+
+	Scripting::fireEvent("config-changed");
+	Scripting::fireEvent("controls-changed");
+
 	// execute any onFinish commands and re-load the config for changes
 	doOnFinish();
 	loadInputConfig(config);
@@ -360,7 +412,7 @@ void InputManager::doOnFinish()
 	std::string path = getConfigPath();
 	pugi::xml_document doc;
 
-	if(fs::exists(path))
+	if(Utils::FileSystem::exists(path))
 	{
 		pugi::xml_parse_result result = doc.load_file(path.c_str());
 		if(!result)
@@ -398,14 +450,14 @@ void InputManager::doOnFinish()
 
 std::string InputManager::getConfigPath()
 {
-	std::string path = getHomePath();
+	std::string path = Utils::FileSystem::getHomePath();
 	path += "/.emulationstation/es_input.cfg";
 	return path;
 }
 
 std::string InputManager::getTemporaryConfigPath()
 {
-	std::string path = getHomePath();
+	std::string path = Utils::FileSystem::getHomePath();
 	path += "/.emulationstation/es_temporaryinput.cfg";
 	return path;
 }
@@ -418,13 +470,16 @@ bool InputManager::initialized() const
 int InputManager::getNumConfiguredDevices()
 {
 	int num = 0;
-	for(auto it = mInputConfigs.begin(); it != mInputConfigs.end(); it++)
+	for(auto it = mInputConfigs.cbegin(); it != mInputConfigs.cend(); it++)
 	{
 		if(it->second->isConfigured())
 			num++;
 	}
 
 	if(mKeyboardInputConfig->isConfigured())
+		num++;
+
+	if(mCECInputConfig->isConfigured())
 		num++;
 
 	return num;
@@ -435,8 +490,11 @@ std::string InputManager::getDeviceGUIDString(int deviceId)
 	if(deviceId == DEVICE_KEYBOARD)
 		return KEYBOARD_GUID_STRING;
 
+	if(deviceId == DEVICE_CEC)
+		return CEC_GUID_STRING;
+
 	auto it = mJoysticks.find(deviceId);
-	if(it == mJoysticks.end())
+	if(it == mJoysticks.cend())
 	{
 		LOG(LogError) << "getDeviceGUIDString - deviceId " << deviceId << " not found!";
 		return "something went horribly wrong";

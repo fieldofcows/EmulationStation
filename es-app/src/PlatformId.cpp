@@ -1,7 +1,6 @@
 #include "PlatformId.h"
-#include <string.h>
 
-extern const char* mameNameToRealName[];
+#include <string.h>
 
 namespace PlatformIds
 {
@@ -22,26 +21,36 @@ namespace PlatformIds
 		"atarijaguar",
 		"atarijaguarcd",
 		"atarixe",
+		"bbcmicro",
 		"colecovision",
 		"c64", // commodore 64
+		"daphne",
 		"intellivision",
 		"macintosh",
 		"xbox",
 		"xbox360",
 		"msx",
 		"neogeo",
+		"neogeocd",
 		"ngp", // neo geo pocket
 		"ngpc", // neo geo pocket color
 		"n3ds", // nintendo 3DS
 		"n64", // nintendo 64
 		"nds", // nintendo DS
+		"fds", // Famicom Disk System
 		"nes", // nintendo entertainment system
+		"pokemini",
+		"channelf", // Fairchild ChannelF
 		"gb", // game boy
 		"gba", // game boy advance
 		"gbc", // game boy color
 		"gc", // gamecube
 		"wii",
 		"wiiu",
+		"virtualboy",
+		"gameandwatch",
+		"switch", // Nintendo Switch
+		"openbor",
 		"pc",
 		"sega32x",
 		"segacd",
@@ -51,6 +60,8 @@ namespace PlatformIds
 		"mastersystem", // sega master system
 		"megadrive", // sega megadrive
 		"saturn", // sega saturn
+		"sg-1000",
+		"samcoupe",
 		"psx",
 		"ps2",
 		"ps3",
@@ -58,10 +69,30 @@ namespace PlatformIds
 		"psvita",
 		"psp", // playstation portable
 		"snes", // super nintendo entertainment system
-		"pcengine", // turbografx-16/pcengine
+		"scummvm",
+		"x1",
+		"x68000",
+		"solarus",
+		"pico8",
+		"tic80",
+		"moto", // Thomson MO/TO
+		"pc88", // NEC PC-8801
+		"pc98", // NEC PC-9801
+		"pcengine", // (aka turbografx-16) HuCards only
+		"pcenginecd", // (aka turbografx-16) CD-ROMs only
+		"pcfx",
 		"wonderswan",
 		"wonderswancolor",
 		"zxspectrum",
+		"zx81",
+		"videopac",
+		"vectrex",
+		"trs-80",
+		"coco",
+		"ti99",
+		"dragon32",
+		"zmachine",
+		"fmtowns",
 
 		"ignore", // do not allow scraping for this system
 		"invalid"
@@ -84,18 +115,5 @@ namespace PlatformIds
 	const char* getPlatformName(PlatformId id)
 	{
 		return PlatformNames[id];
-	}
-
-	const char* getCleanMameName(const char* from)
-	{
-		const char** mameNames = mameNameToRealName;
-
-		while(*mameNames != NULL && strcmp(from, *mameNames) != 0)
-			mameNames += 2;
-
-		if(*mameNames)
-			return *(mameNames + 1);
-		
-		return from;
 	}
 }

@@ -1,9 +1,10 @@
 #pragma once
+#ifndef ES_CORE_RESOURCES_RESOURCE_MANAGER_H
+#define ES_CORE_RESOURCES_RESOURCE_MANAGER_H
 
-#include <stddef.h>
-#include <memory>
-#include <map>
 #include <list>
+#include <memory>
+#include <string>
 
 //The ResourceManager exists to...
 //Allow loading resources embedded into the executable like an actual file.
@@ -20,8 +21,8 @@ class ResourceManager;
 class IReloadable
 {
 public:
-	virtual void unload(std::shared_ptr<ResourceManager>& rm) = 0;
-	virtual void reload(std::shared_ptr<ResourceManager>& rm) = 0;
+	virtual bool unload() = 0;
+	virtual void reload() = 0;
 };
 
 class ResourceManager
@@ -34,6 +35,7 @@ public:
 	void unloadAll();
 	void reloadAll();
 
+	std::string getResourcePath(const std::string& path) const;
 	const ResourceData getFileData(const std::string& path) const;
 	bool fileExists(const std::string& path) const;
 
@@ -44,5 +46,14 @@ private:
 
 	ResourceData loadFile(const std::string& path) const;
 
-	std::list< std::weak_ptr<IReloadable> > mReloadables;
+	class ReloadableInfo
+	{
+	public:
+		std::weak_ptr<IReloadable> data;
+		bool reload;
+	};
+
+	std::list<std::shared_ptr<ReloadableInfo>> mReloadables; //  std::weak_ptr<IReloadable>
 };
+
+#endif // ES_CORE_RESOURCES_RESOURCE_MANAGER_H

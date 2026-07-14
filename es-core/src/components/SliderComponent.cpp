@@ -1,9 +1,6 @@
 #include "components/SliderComponent.h"
-#include <assert.h>
-#include "Renderer.h"
+
 #include "resources/Font.h"
-#include "Log.h"
-#include "Util.h"
 
 #define MOVE_REPEAT_DELAY 500
 #define MOVE_REPEAT_RATE 40
@@ -18,13 +15,13 @@ SliderComponent::SliderComponent(Window* window, float min, float max, float inc
 
 	mKnob.setOrigin(0.5f, 0.5f);
 	mKnob.setImage(":/slider_knob.svg");
-	
+
 	setSize(Renderer::getScreenWidth() * 0.15f, Font::get(FONT_SIZE_MEDIUM)->getLetterHeight());
 }
 
 bool SliderComponent::input(InputConfig* config, Input input)
 {
-	if(config->isMappedTo("left", input))
+	if(config->isMappedLike("left", input))
 	{
 		if(input.value)
 			setValue(mValue - mSingleIncrement);
@@ -33,7 +30,7 @@ bool SliderComponent::input(InputConfig* config, Input input)
 		mMoveAccumulator = -MOVE_REPEAT_DELAY;
 		return true;
 	}
-	if(config->isMappedTo("right", input))
+	if(config->isMappedLike("right", input))
 	{
 		if(input.value)
 			setValue(mValue + mSingleIncrement);
@@ -57,13 +54,13 @@ void SliderComponent::update(int deltaTime)
 			mMoveAccumulator -= MOVE_REPEAT_RATE;
 		}
 	}
-	
+
 	GuiComponent::update(deltaTime);
 }
 
-void SliderComponent::render(const Eigen::Affine3f& parentTrans)
+void SliderComponent::render(const Transform4x4f& parentTrans)
 {
-	Eigen::Affine3f trans = roundMatrix(parentTrans * getTransform());
+	Transform4x4f trans = parentTrans * getTransform();
 	Renderer::setMatrix(trans);
 
 	// render suffix
@@ -74,11 +71,11 @@ void SliderComponent::render(const Eigen::Affine3f& parentTrans)
 
 	//render line
 	const float lineWidth = 2;
-	Renderer::drawRect(mKnob.getSize().x() / 2, mSize.y() / 2 - lineWidth / 2, width, lineWidth, 0x777777FF);
+	Renderer::drawRect(mKnob.getSize().x() / 2, mSize.y() / 2 - lineWidth / 2, width, lineWidth, 0x777777FF, 0x777777FF);
 
 	//render knob
 	mKnob.render(trans);
-	
+
 	GuiComponent::renderChildren(trans);
 }
 
@@ -102,7 +99,7 @@ void SliderComponent::onSizeChanged()
 {
 	if(!mSuffix.empty())
 		mFont = Font::get((int)(mSize.y()), FONT_PATH_LIGHT);
-	
+
 	onValueChanged();
 }
 
@@ -126,7 +123,7 @@ void SliderComponent::onValueChanged()
 		ss << mSuffix;
 		const std::string max = ss.str();
 
-		Eigen::Vector2f textSize = mFont->sizeText(max);
+		Vector2f textSize = mFont->sizeText(max);
 		mValueCache = std::shared_ptr<TextCache>(mFont->buildTextCache(val, mSize.x() - textSize.x(), (mSize.y() - textSize.y()) / 2, 0x777777FF));
 		mValueCache->metrics.size[0] = textSize.x(); // fudge the width
 	}

@@ -1,8 +1,8 @@
 #include "BusyComponent.h"
 
 #include "components/AnimatedImageComponent.h"
+#include "components/ImageComponent.h"
 #include "components/TextComponent.h"
-#include "Renderer.h"
 
 // animation definition
 AnimationFrame BUSY_ANIMATION_FRAMES[] = {
@@ -12,8 +12,6 @@ AnimationFrame BUSY_ANIMATION_FRAMES[] = {
 	{":/busy_3.svg", 300},
 };
 const AnimationDef BUSY_ANIMATION_DEF = { BUSY_ANIMATION_FRAMES, 4, true };
-
-using namespace Eigen;
 
 BusyComponent::BusyComponent(Window* window) : GuiComponent(window),
 	mBackground(window, ":/frame.png"), mGrid(window, Vector2i(5, 3))
@@ -47,7 +45,7 @@ void BusyComponent::onSizeChanged()
 	mGrid.setColWidthPerc(3, textWidth / mSize.x());
 
 	mGrid.setRowHeightPerc(1, textHeight / mSize.y());
-	
+
 	mBackground.fitTo(Vector2f(mGrid.getColWidth(1) + mGrid.getColWidth(2) + mGrid.getColWidth(3), textHeight + 2),
 		mAnimation->getPosition(), Vector2f(0, 0));
 }

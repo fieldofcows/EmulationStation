@@ -1,50 +1,48 @@
 EmulationStation
 ================
 
-A cross-platform graphical front-end for emulators with controller navigation.
-
-Project website: http://emulationstation.org
-
-**Raspberry Pi users:**
-A cool guy named petrockblog made a script which automatically installs many emulators and ES. It also includes options for configuring your RPi and setting it up to boot directly into ES. You can find it here: https://github.com/petrockblog/RetroPie-Setup
-
-Download
-========
-
-Download a pre-compiled version at [emulationstation.org](http://emulationstation.org#download).
-
-
-I found a bug! I have a problem!
-================================
-
-- First, try to check the [issue list](https://github.com/Aloshi/EmulationStation/issues?state=open) for some entries that might match your problem.  Make sure to check closed issues too!
-
-- If you're running EmulationStation on a on Raspberry Pi and have problems with config file changes not taking effect, content missing after editing, etc., check if your SD card is corrupted (see issues [#78](https://github.com/Aloshi/EmulationStation/issues/78) and [#107](https://github.com/Aloshi/EmulationStation/issues/107)). You can do this with free tools like [h2testw](http://www.heise.de/download/h2testw.html) or [F3](http://oss.digirati.com.br/f3/).
-
-- Try to update to the latest version of EmulationStation using git (you might need to delete your `es_input.cfg` and `es_settings.cfg` after that to reset them to default values):
-```bash
-cd YourEmulationStationDirectory
-git pull
-cmake .
-make
-```
-
-- If your problem still isn't gone, the best way to report a bug is to post an issue on GitHub. Try to post the simplest steps possible to reproduce the bug. Include files you think might be related (except for ROMs, of course). If you haven't re-run ES since the crash, the log file `~/.emulationstation/es_log.txt` is also helpful.
+This is a fork of EmulationStation for RetroPie.
+EmulationStation is a cross-platform graphical front-end for emulators with controller navigation.
 
 Building
 ========
 
+Building on Linux
+-----------------
+
 EmulationStation uses some C++11 code, which means you'll need to use at least g++-4.7 on Linux, or VS2010 on Windows, to compile.
 
-EmulationStation has a few dependencies. For building, you'll need CMake, SDL2, Boost (System, Filesystem, DateTime, Locale), FreeImage, FreeType, Eigen3, and cURL.  You also should probably install the `fonts-droid` package which contains fallback fonts for Chinese/Japanese/Korean characters, but ES will still work fine without it (this package is only used at run-time).
+EmulationStation has a few dependencies. For building, you'll need CMake, SDL2, FreeImage, FreeType, LibVLC (ver. 3 or later), cURL and RapidJSON.  You also should probably install the `fonts-droid` package which contains fallback fonts for Chinese/Japanese/Korean characters, but ES will still work fine without it (this package is only used at run-time).
 
-**On Debian/Ubuntu:**
-All of this be easily installed with apt-get:
+### On Debian/Ubuntu:
+All of this be easily installed with `apt-get`:
 ```bash
-sudo apt-get install libsdl2-dev libboost-system-dev libboost-filesystem-dev libboost-date-time-dev \
-  libboost-locale-dev libfreeimage-dev libfreetype6-dev libeigen3-dev libcurl4-openssl-dev \
-  libasound2-dev libgl1-mesa-dev build-essential cmake fonts-droid \
-  libvlc-dev libvlccore-dev vlc-nox
+sudo apt-get install libsdl2-dev libfreeimage-dev libfreetype6-dev libcurl4-openssl-dev rapidjson-dev \
+  libasound2-dev libgles2-mesa-dev build-essential cmake fonts-droid-fallback libvlc-dev \
+  libvlccore-dev vlc-bin
+```
+### On Fedora:
+All of this be easily installed with `dnf` (with rpmfusion activated) :
+```bash
+sudo dnf install SDL2-devel freeimage-devel freetype-devel curl-devel \
+  alsa-lib-devel mesa-libGL-devel cmake \
+  vlc-devel rapidjson-devel
+```
+
+ Optionaly, `pugixml` can be installed and used (Debian package: `libpugixml-dev`, Fedora/SuSE package: `pugixml-devel`), but EmulationStation can use its own included copy if not found.
+ 
+**Note**: this repository uses a git submodule - to checkout the source and all submodules, use
+
+```bash
+git clone --recursive https://github.com/RetroPie/EmulationStation.git
+```
+
+or
+
+```bash
+git clone https://github.com/RetroPie/EmulationStation.git
+cd EmulationStation
+git submodule update --init
 ```
 
 Then, generate and build the Makefile with CMake:
@@ -54,29 +52,132 @@ cmake .
 make
 ```
 
-**On the Raspberry Pi:**
+NOTE: to generate a `Debug` build on Unix/Linux, run the Makefile generation step as:
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug .
+```
 
-Complete Raspberry Pi build instructions at [emulationstation.org](http://emulationstation.org/gettingstarted.html#install_rpi_standalone).
+### On the Raspberry Pi:
 
-**On Windows:**
+* Choosing a GLES implementation.
 
-[Boost](http://www.boost.org/users/download/) (you'll need to compile yourself or get the pre-compiled binaries)
+   * if the Pi system uses the legacy/Broadcom driver, install the `libraspberry-dev` package before running `cmake` to configure the build
+   * if the Pi system uses the Mesa VC4/V3D GL driver, build using `-DUSE_MESA_GLES=On` to choose the MESA GLES implementation. This option is _mandatory_ when compiling for a Pi4 system, since the legacy GL drivers are not supported anymore on this system.
 
-[Eigen3](http://eigen.tuxfamily.org/index.php?title=Main_Page) (header-only library)
+  NOTE: Starting with RasPI OS 'Bullseye', the legacy/Broadcom drivers are not supported anymore, so `-DUSE_MESA_GLES=On` should be used.
 
-[FreeImage](http://downloads.sourceforge.net/freeimage/FreeImage3154Win32.zip)
+* Enable the audio/memory defaults by adding `-DRPI=On` to the build options
+* Support for using `omxplayer` to play video previews in the gamelist is enabled by adding `-DOMX=On` to the build options.
+  NOTE: `omxplayer` support is not available on 64bit RasPI OS or in the default RasPI OS 'Bullseye' configuration.
 
-[FreeType2](http://download.savannah.gnu.org/releases/freetype/freetype-2.4.9.tar.bz2) (you'll need to compile)
+**GLES build notes**
 
-[SDL2](http://www.libsdl.org/release/SDL2-devel-2.0.3-VC.zip)
+ If your system doesn't have a working GLESv2 implementation, the GLESv1 legacy renderer can be compiled in by adding `-DUSE_GLES1=On` to the build options.
 
-[cURL](http://curl.haxx.se/download.html) (you'll need to compile or get the pre-compiled DLL version)
+Building on Windows
+-------------------
 
-(Remember to copy necessary .DLLs into the same folder as the executable: probably FreeImage.dll, freetype6.dll, SDL2.dll, libcurl.dll, and zlib1.dll. Exact list depends on if you built your libraries in "static" mode or not.)
+* Install [Visual Studio 2022](https://visualstudio.microsoft.com/vs/community/). At a minimum, install the "Desktop development with C++" workload with the default list of optional items.
 
-[CMake](http://www.cmake.org/cmake/resources/software.html) (this is used for generating the Visual Studio project)
+* Install the latest version of [CMake](https://cmake.org/download/) (e.g., [cmake-3.27.1-windows-x86_64.msi](https://github.com/Kitware/CMake/releases/download/v3.27.1/cmake-3.27.1-windows-x86_64.msi)). CMake is used for generating the Visual Studio project.
 
-(If you don't know how to use CMake, here are some hints: run cmake-gui and point it at your EmulationStation folder.  Point the "build" directory somewhere - I use EmulationStation/build.  Click configure, choose "Visual Studio [year] Project", fill in red fields as they appear and keep clicking Configure (you may need to check "Advanced"), then click Generate.)
+* Use git to clone [vcpkg](https://vcpkg.io/en/), then run the bootstrap script as shown below to build vcpkg . This is a C/C++ dependency manager from Microsoft.
+
+```batchfile
+C:\src>git clone https://github.com/Microsoft/vcpkg.git
+C:\src>.\vcpkg\bootstrap-vcpkg.bat
+```
+
+* Download the latest [nuget.exe](https://dist.nuget.org/win-x86-commandline/latest/nuget.exe) to a folder that is in your Windows PATH. NuGet is a .NET package manager.
+
+* Use NuGet to download the latest [libVLC](https://www.videolan.org/vlc/libvlc.html). This library is used to play video snaps.
+
+```batchfile
+C:\src\EmulationStation>mkdir nuget
+C:\src\EmulationStation>cd nuget
+C:\src\EmulationStation\nuget>nuget install -ExcludeVersion VideoLAN.LibVLC.Windows
+```
+
+* Use vcpkg to download the latest pre-compiled [cURL](http://curl.haxx.se/download.html). This is a library for transferring data with URLs.
+
+```batchfile
+c:\src>.\vcpkg\vcpkg install curl:x86-windows-static-md
+```
+
+* Use vcpkg to download the latest [FreeImage](https://freeimage.sourceforge.io/index.html). This library supports popular graphics image formats.
+
+```batchfile
+c:\src\>.\vcpkg\vcpkg install freeimage:x86-windows-static-md
+```
+
+* Use vcpkg to download the latest pre-compiled [FreeType2](https://freetype.org/). This library is used to render fonts.
+
+```batchfile
+c:\src>.\vcpkg\vcpkg install freetype:x86-windows-static-md
+```
+
+* Use vcpkg to download the latest [SDL2](http://www.libsdl.org/). Simple DirectMedia Layer is a cross-platform development library designed to provide low level access to audio, keyboard, mouse, joystick, and graphics hardware via OpenGL and Direct3D.
+
+```batchfile
+c:\src>.\vcpkg\vcpkg install sdl2:x86-windows-static-md
+```
+
+* Use vcpkg to download the latest [RapidJSON](http://rapidjson.org/). This library provides a fast JSON parser/generator for C++ with both SAX/DOM style API.
+
+```batchfile
+c:\src>.\vcpkg\vcpkg install rapidjson:x86-windows-static-md
+```
+
+* Using the example shown below, configure environment variables to point to the libraries that were installed in the above steps. Please note that the below example intentionally uses forward slashes for compatibility with CMake.
+
+```batchfile
+C:\src\EmulationStation>set VCPKG=C:/src/vcpkg/installed/x86-windows-static-md
+C:\src\EmulationStation>set NUGET=C:/src/EmulationStation/nuget
+C:\src\EmulationStation>set FREETYPE_DIR=%VCPKG%
+C:\src\EmulationStation>set FREEIMAGE_HOME=%VCPKG%
+C:\src\EmulationStation>set VLC_HOME=%NUGET%/VideoLAN.LibVLC.Windows/build/x86
+C:\src\EmulationStation>set RAPIDJSON_INCLUDE_DIRS=%VCPKG%/include
+C:\src\EmulationStation>set CURL_INCLUDE_DIR=%VCPKG%/include
+C:\src\EmulationStation>set SDL2_INCLUDE_DIR=%VCPKG%/include/SDL2
+C:\src\EmulationStation>set VLC_INCLUDE_DIR=%VLC_HOME%/include
+C:\src\EmulationStation>set CURL_LIBRARY=%VCPKG%/lib/*.lib
+C:\src\EmulationStation>set SDL2_LIBRARY=%VCPKG%/lib/manual-link/SDL2main.lib
+C:\src\EmulationStation>set VLC_LIBRARIES=%VLC_HOME%/libvlc*.lib
+C:\src\EmulationStation>set VLC_VERSION=3.0.11
+```
+
+* Use CMake to generate the Visual Studio project.
+
+```batchfile
+C:\src\EmulationStation>mkdir build
+C:\src\EmulationStation>cmake . -B build -A Win32 ^
+-DRAPIDJSON_INCLUDE_DIRS=%RAPIDJSON_INCLUDE_DIRS% ^
+-DCURL_INCLUDE_DIR=%CURL_INCLUDE_DIR% ^
+-DSDL2_INCLUDE_DIR=%SDL2_INCLUDE_DIR% ^
+-DVLC_INCLUDE_DIR=%VLC_INCLUDE_DIR% ^
+-DCURL_LIBRARY=%CURL_LIBRARY% ^
+-DSDL2_LIBRARY=%SDL2_LIBRARY% ^
+-DVLC_LIBRARIES=%VLC_LIBRARIES% ^
+-DVLC_VERSION=%VLC_VERSION% ^
+-DCMAKE_EXE_LINKER_FLAGS=/SAFESEH:NO
+```
+
+* Use CMake to build the Visual Studio project.
+
+```batchfile
+C:\src\EmulationStation>cmake --build build --config Release
+```
+
+* Using the example shown below, copy the newly built binaries and other needed files to destination folder.
+
+```batchfile
+C:\src\EmulationStation>mkdir -p C:\apps\EmulationStation\.emulationstation
+C:\src\EmulationStation>xcopy C:\src\EmulationStation\resources C:\apps\EmulationStation\resources /h /i /c /k /e /r /y
+C:\src\EmulationStation>copy C:\src\EmulationStation\Release\*.exe C:\apps\EmulationStation /Y
+C:\src\EmulationStation>copy C:\src\EmulationStation\nuget\VideoLAN.LibVLC.Windows\build\x86\*.dll C:\apps\EmulationStation /Y
+C:\src\EmulationStation>xcopy C:\src\EmulationStation\nuget\VideoLAN.LibVLC.Windows\build\x86\plugins C:\apps\EmulationStation\plugins /h /i /c /k /e /r /y
+
+```
 
 
 Configuring
@@ -104,19 +205,7 @@ The new configuration will be added to the `~/.emulationstation/es_input.cfg` fi
 
 **If your controller stops working, you can delete the `~/.emulationstation/es_input.cfg` file to make the input configuration screen re-appear on next run.**
 
-
-You can use `--help` or `-h` to view a list of command-line options. Briefly outlined here:
-```
---resolution [width] [height]	- try and force a particular resolution
---gamelist-only		- only display games defined in a gamelist.xml file.
---ignore-gamelist	- do not parse any gamelist.xml files.
---draw-framerate	- draw the framerate.
---no-exit		- do not display 'exit' in the ES menu.
---debug			- show the console window on Windows, do slightly more logging
---windowed	- run ES in a window, works best in conjunction with --resolution [w] [h].
---vsync [1/on or 0/off]	- turn vsync on or off (default is on).
---scrape	- run the interactive command-line metadata scraper.
-```
+You can use `--help` or `-h` to view a list of command-line options.
 
 As long as ES hasn't frozen, you can always press F4 to close the application.
 

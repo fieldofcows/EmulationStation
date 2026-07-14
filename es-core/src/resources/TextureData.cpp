@@ -1,17 +1,20 @@
 #include "resources/TextureData.h"
+
+#include "math/Misc.h"
+#include "renderers/Renderer.h"
 #include "resources/ResourceManager.h"
-#include "Log.h"
 #include "ImageIO.h"
-#include "string.h"
-#include "Util.h"
-#include "nanosvg/nanosvg.h"
-#include "nanosvg/nanosvgrast.h"
-#include <vector>
+#include "Log.h"
+#include <nanosvg/nanosvg.h>
+#include <nanosvg/nanosvgrast.h>
+#include <assert.h>
+#include <string.h>
 
 #define DPI 96
 
 TextureData::TextureData(bool tile) : mTile(tile), mTextureID(0), mDataRGBA(nullptr), mScalable(false),
-									  mWidth(0), mHeight(0), mSourceWidth(0.0f), mSourceHeight(0.0f)
+									  mWidth(0), mHeight(0), mSourceWidth(0.0f), mSourceHeight(0.0f), mLoadFailed(false),
+									  mBindGeneration(0)
 {
 }
 
@@ -32,11 +35,9 @@ void TextureData::initFromPath(const std::string& path)
 bool TextureData::initSVGFromMemory(const unsigned char* fileData, size_t length)
 {
 	// If already initialised then don't read again
-	{
-		std::unique_lock<std::mutex> lock(mMutex);
-		if (mDataRGBA)
-			return true;
-	}
+	std::unique_lock<std::mutex> lock(mMutex);
+	if (mDataRGBA)
+		return true;
 
 	// nsvgParse excepts a modifiable, null-terminated string
 	char* copy = (char*)malloc(length + 1);
@@ -46,42 +47,33 @@ bool TextureData::initSVGFromMemory(const unsigned char* fileData, size_t length
 
 	NSVGimage* svgImage = nsvgParse(copy, "px", DPI);
 	free(copy);
-	if (!svgImage)
+	if (!svgImage || (svgImage->width == 0) || (svgImage->height == 0))
 	{
 		LOG(LogError) << "Error parsing SVG image.";
+		nsvgDelete(svgImage);
 		return false;
 	}
 
 	// We want to rasterise this texture at a specific resolution. If the source size
 	// variables are set then use them otherwise set them from the parsed file
-	if ((mSourceWidth == 0.0f) && (mSourceHeight == 0.0f))
-	{
-		mSourceWidth = svgImage->width;
+	if (mSourceHeight == 0.0f)
 		mSourceHeight = svgImage->height;
-	}
-	mWidth = (size_t)round(mSourceWidth);
-	mHeight = (size_t)round(mSourceHeight);
 
-	if (mWidth == 0)
-	{
-		// auto scale width to keep aspect
-		mWidth = (size_t)round(((float)mHeight / svgImage->height) * svgImage->width);
-	}
-	else if (mHeight == 0)
-	{
-		// auto scale height to keep aspect
-		mHeight = (size_t)round(((float)mWidth / svgImage->width) * svgImage->height);
-	}
+	mSourceWidth = (mSourceHeight * svgImage->width) / svgImage->height;
+
+	mWidth = (size_t)Math::round(mSourceWidth);
+	mHeight = (size_t)Math::round(mSourceHeight);
 
 	unsigned char* dataRGBA = new unsigned char[mWidth * mHeight * 4];
 
 	NSVGrasterizer* rast = nsvgCreateRasterizer();
-	nsvgRasterize(rast, svgImage, 0, 0, mHeight / svgImage->height, dataRGBA, mWidth, mHeight, mWidth * 4);
+	float scale = Math::min(mHeight / svgImage->height, mWidth / svgImage->width);
+	nsvgRasterize(rast, svgImage, 0, 0, scale, dataRGBA, (int)mWidth, (int)mHeight, (int)mWidth * 4);
 	nsvgDeleteRasterizer(rast);
+	nsvgDelete(svgImage);
 
 	ImageIO::flipPixelsVert(dataRGBA, mWidth, mHeight);
 
-	std::unique_lock<std::mutex> lock(mMutex);
 	mDataRGBA = dataRGBA;
 
 	return true;
@@ -105,8 +97,8 @@ bool TextureData::initImageFromMemory(const unsigned char* fileData, size_t leng
 		return false;
 	}
 
-	mSourceWidth = width;
-	mSourceHeight = height;
+	mSourceWidth = (float) width;
+	mSourceHeight = (float) height;
 	mScalable = false;
 
 	return initFromRGBA(imageRGBA.data(), width, height);
@@ -145,15 +137,22 @@ bool TextureData::load()
 		else
 			retval = initImageFromMemory((const unsigned char*)data.ptr.get(), data.length);
 	}
+	if (!retval)
+	{
+		std::unique_lock<std::mutex> lock(mMutex);
+		mLoadFailed = true;
+	}
 	return retval;
 }
 
-bool TextureData::isLoaded()
+TextureData::LoadStatus TextureData::loadStatus()
 {
 	std::unique_lock<std::mutex> lock(mMutex);
 	if (mDataRGBA || (mTextureID != 0))
-		return true;
-	return false;
+		return LoadStatus::LOADED;
+	if (mLoadFailed)
+		return LoadStatus::FAILED;
+	return LoadStatus::LOADING;
 }
 
 bool TextureData::uploadAndBind()
@@ -162,7 +161,7 @@ bool TextureData::uploadAndBind()
 	std::unique_lock<std::mutex> lock(mMutex);
 	if (mTextureID != 0)
 	{
-		glBindTexture(GL_TEXTURE_2D, mTextureID);
+		Renderer::bindTexture(mTextureID);
 	}
 	else
 	{
@@ -174,19 +173,9 @@ bool TextureData::uploadAndBind()
 		// Make sure we're ready to upload
 		if ((mWidth == 0) || (mHeight == 0) || (mDataRGBA == nullptr))
 			return false;
-		glGetError();
-		//now for the openGL texture stuff
-		glGenTextures(1, &mTextureID);
-		glBindTexture(GL_TEXTURE_2D, mTextureID);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, mDataRGBA);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-		const GLint wrapMode = mTile ? GL_REPEAT : GL_CLAMP_TO_EDGE;
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapMode);
+		// Upload texture
+		mTextureID = Renderer::createTexture(Renderer::Texture::RGBA, true, mTile, (int)mWidth, (int)mHeight, mDataRGBA);
 	}
 	return true;
 }
@@ -196,7 +185,7 @@ void TextureData::releaseVRAM()
 	std::unique_lock<std::mutex> lock(mMutex);
 	if (mTextureID != 0)
 	{
-		glDeleteTextures(1, &mTextureID);
+		Renderer::destroyTexture(mTextureID);
 		mTextureID = 0;
 	}
 }

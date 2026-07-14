@@ -1,14 +1,18 @@
-#ifndef _INPUTCONFIG_H_
-#define _INPUTCONFIG_H_
+#pragma once
+#ifndef ES_CORE_INPUT_CONFIG_H
+#define ES_CORE_INPUT_CONFIG_H
 
+#include <CECInput.h>
+#include <SDL_joystick.h>
+#include <SDL_keyboard.h>
 #include <map>
-#include <vector>
-#include <string>
-#include <SDL.h>
 #include <sstream>
-#include "pugixml/pugixml.hpp"
+#include <vector>
+
+namespace pugi { class xml_node; }
 
 #define DEVICE_KEYBOARD -1
+#define DEVICE_CEC      -2
 
 enum InputType
 {
@@ -16,6 +20,7 @@ enum InputType
 	TYPE_BUTTON,
 	TYPE_HAT,
 	TYPE_KEY,
+	TYPE_CEC_BUTTON,
 	TYPE_COUNT
 };
 
@@ -54,6 +59,11 @@ public:
 		return "neutral?";
 	}
 
+	std::string getCECButtonName(int keycode)
+	{
+		return CECInput::getKeyCodeString(keycode);
+	}
+
 	std::string string()
 	{
 		std::stringstream stream;
@@ -70,6 +80,9 @@ public:
 				break;
 			case TYPE_KEY:
 				stream << "Key " << SDL_GetKeyName((SDL_Keycode)id);
+				break;
+			case TYPE_CEC_BUTTON:
+				stream << "CEC-Button " << getCECButtonName(id);
 				break;
 			default:
 				stream << "Input to string error";
@@ -89,30 +102,39 @@ public:
 	void mapInput(const std::string& name, Input input);
 	void unmapInput(const std::string& name); // unmap all Inputs mapped to this name
 
-	inline int getDeviceId() const { return mDeviceId; };
+	inline int getDeviceId() const { return mDeviceId; }
 	inline const std::string& getDeviceName() { return mDeviceName; }
 	inline const std::string& getDeviceGUIDString() { return mDeviceGUID; }
+	inline const unsigned short getVendorId() { return mVendorId; }
+	inline const unsigned short getProductId() { return mProductId; }
+
+	inline void setVendorId(unsigned short vendorID) { mVendorId = vendorID; }
+	inline void setProductId(unsigned short productID) { mProductId = productID; }
 
 	//Returns true if Input is mapped to this name, false otherwise.
 	bool isMappedTo(const std::string& name, Input input);
+	bool isMappedLike(const std::string& name, Input input);
 
 	//Returns a list of names this input is mapped to.
 	std::vector<std::string> getMappedTo(Input input);
 
-	void loadFromXML(pugi::xml_node root);
-	void writeToXML(pugi::xml_node parent);
-
-	bool isConfigured();
-
-private:
 	// Returns true if there is an Input mapped to this name, false otherwise.
 	// Writes Input mapped to this name to result if true.
 	bool getInputByName(const std::string& name, Input* result);
 
+	void loadFromXML(pugi::xml_node& root);
+	void writeToXML(pugi::xml_node& parent);
+
+	bool isConfigured();
+
+private:
 	std::map<std::string, Input> mNameMap;
 	const int mDeviceId;
 	const std::string mDeviceName;
 	const std::string mDeviceGUID;
+
+	unsigned short mVendorId;
+	unsigned short mProductId;
 };
 
-#endif
+#endif // ES_CORE_INPUT_CONFIG_H

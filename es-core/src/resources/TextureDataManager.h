@@ -1,15 +1,16 @@
 #pragma once
+#ifndef ES_CORE_RESOURCES_TEXTURE_DATA_MANAGER_H
+#define ES_CORE_RESOURCES_TEXTURE_DATA_MANAGER_H
 
-#include "resources/ResourceManager.h"
-#include "platform.h"
-#include "resources/TextureData.h"
+#include <condition_variable>
+#include <cstdint>
+#include <list>
 #include <map>
 #include <memory>
-#include <thread>
 #include <mutex>
-#include <condition_variable>
-#include <functional>
+#include <thread>
 
+class TextureData;
 class TextureResource;
 
 class TextureLoader
@@ -28,7 +29,7 @@ private:
 	void threadProc();
 
 	std::list<std::shared_ptr<TextureData> > 										mTextureDataQ;
-	std::map<TextureData*, std::list<std::shared_ptr<TextureData> >::iterator > 	mTextureDataLookup;
+	std::map<TextureData*, std::list<std::shared_ptr<TextureData> >::const_iterator > 	mTextureDataLookup;
 
 	std::thread*				mThread;
 	std::mutex					mMutex;
@@ -63,7 +64,7 @@ public:
 	// will be deleted when the other thread has finished with it
 	void remove(const TextureResource* key);
 
-	std::shared_ptr<TextureData> get(const TextureResource* key);
+	std::shared_ptr<TextureData> get(const TextureResource* key, bool enableLoading = true);
 	bool bind(const TextureResource* key);
 
 	// Get the total size of all textures managed by this object, loaded and unloaded in bytes
@@ -76,11 +77,20 @@ public:
 	// Load a texture, freeing resources as necessary to make space
 	void load(std::shared_ptr<TextureData> tex, bool block = false);
 
+	// Advance the bind-generation counter. Called once per rendered frame so the
+	// eviction logic in load() can tell which textures were drawn recently and
+	// avoid evicting them — otherwise the just-evicted texture is immediately
+	// re-requested next frame, causing a cascade of evictions and visible flicker.
+	void nextBindGeneration() { ++mBindGeneration; }
+	uint64_t currentBindGeneration() const { return mBindGeneration; }
+
 private:
 
 	std::list<std::shared_ptr<TextureData> >												mTextures;
-	std::map<const TextureResource*, std::list<std::shared_ptr<TextureData> >::iterator > 	mTextureLookup;
+	std::map<const TextureResource*, std::list<std::shared_ptr<TextureData> >::const_iterator > 	mTextureLookup;
 	std::shared_ptr<TextureData>															mBlank;
 	TextureLoader*																			mLoader;
+	uint64_t																				mBindGeneration = 1;
 };
 
+#endif // ES_CORE_RESOURCES_TEXTURE_DATA_MANAGER_H

@@ -1,23 +1,25 @@
 #pragma once
+#ifndef ES_CORE_THEME_DATA_H
+#define ES_CORE_THEME_DATA_H
 
-#include <iostream>
-#include <sstream>
-#include <memory>
-#include <map>
+#include "math/Vector2f.h"
+#include "math/Vector4f.h"
+#include "utils/FileSystemUtil.h"
 #include <deque>
-#include <string>
-#include <boost/filesystem.hpp>
-#include <boost/variant.hpp>
-#include <Eigen/Dense>
-#include "pugixml/pugixml.hpp"
-#include "GuiComponent.h"
+#include <map>
+#include <memory>
+#include <sstream>
+#include <vector>
+
+namespace pugi { class xml_node; }
 
 template<typename T>
 class TextListComponent;
 
-class Sound;
+class GuiComponent;
 class ImageComponent;
 class NinePatchComponent;
+class Sound;
 class TextComponent;
 class Window;
 
@@ -38,7 +40,9 @@ namespace ThemeFlags
 		FORCE_UPPERCASE = 1024,
 		LINE_SPACING = 2048,
 		DELAY = 4096,
-
+		Z_INDEX = 8192,
+		ROTATION = 16384,
+		VISIBLE = 32768,
 		ALL = 0xFFFFFFFF
 	};
 }
@@ -52,12 +56,12 @@ public:
 
 	template<typename T>
 	friend ThemeException& operator<<(ThemeException& e, T msg);
-	
-	inline void setFiles(const std::deque<boost::filesystem::path>& deque)
+
+	inline void setFiles(const std::deque<std::string>& deque)
 	{
-		*this << "from theme \"" << deque.front().string() << "\"\n";
-		for(auto it = deque.begin() + 1; it != deque.end(); it++)
-			*this << "  (from included file \"" << (*it).string() << "\")\n";
+		*this << "from theme \"" << deque.front() << "\"\n";
+		for(auto it = deque.cbegin() + 1; it != deque.cend(); it++)
+			*this << "  (from included file \"" << (*it) << "\")\n";
 		*this << "    ";
 	}
 };
@@ -71,25 +75,12 @@ ThemeException& operator<<(ThemeException& e, T appendMsg)
 	return e;
 }
 
-class ThemeExtras : public GuiComponent
-{
-public:
-	ThemeExtras(Window* window) : GuiComponent(window) {};
-	virtual ~ThemeExtras();
-
-	// will take ownership of the components within extras (delete them in destructor or when setExtras is called again)
-	void setExtras(const std::vector<GuiComponent*>& extras);
-
-private:
-	std::vector<GuiComponent*> mExtras;
-};
-
 struct ThemeSet
 {
-	boost::filesystem::path path;
+	std::string path;
 
-	inline std::string getName() const { return path.stem().string(); }
-	inline boost::filesystem::path getThemePath(const std::string& system) const { return path/system/"theme.xml"; }
+	inline std::string getName() const { return Utils::FileSystem::getStem(path); }
+	inline std::string getThemePath(const std::string& system) const { return path + "/" + system + "/theme.xml"; }
 };
 
 class ThemeData
@@ -102,12 +93,38 @@ public:
 		bool extra;
 		std::string type;
 
-		std::map< std::string, boost::variant<Eigen::Vector2f, std::string, unsigned int, float, bool> > properties;
+		struct Property
+		{
+			void operator= (const Vector4f& value)     { r = value; v = Vector2f(value.x(), value.y()); }
+			void operator= (const Vector2f& value)     { v = value; }
+			void operator= (const std::string& value)  { s = value; }
+			void operator= (const unsigned int& value) { i = value; }
+			void operator= (const float& value)        { f = value; }
+			void operator= (const bool& value)         { b = value; }
+
+			Vector4f     r;
+			Vector2f     v;
+			std::string  s;
+			unsigned int i;
+			float        f;
+			bool         b;
+		};
+
+		std::map< std::string, Property > properties;
 
 		template<typename T>
-		T get(const std::string& prop) const { return boost::get<T>(properties.at(prop)); }
+		const T get(const std::string& prop) const
+		{
+			if(     std::is_same<T, Vector2f>::value)     return *(const T*)&properties.at(prop).v;
+			else if(std::is_same<T, std::string>::value)  return *(const T*)&properties.at(prop).s;
+			else if(std::is_same<T, unsigned int>::value) return *(const T*)&properties.at(prop).i;
+			else if(std::is_same<T, float>::value)        return *(const T*)&properties.at(prop).f;
+			else if(std::is_same<T, bool>::value)         return *(const T*)&properties.at(prop).b;
+			else if(std::is_same<T, Vector4f>::value)     return *(const T*)&properties.at(prop).r;
+			return T();
+		}
 
-		inline bool has(const std::string& prop) const { return (properties.find(prop) != properties.end()); }
+		inline bool has(const std::string& prop) const { return (properties.find(prop) != properties.cend()); }
 	};
 
 private:
@@ -123,10 +140,14 @@ public:
 	ThemeData();
 
 	// throws ThemeException
-	void loadFile(const std::string& path);
+	void loadFile(std::map<std::string, std::string> sysDataMap, const std::string& path);
 
 	enum ElementPropertyType
 	{
+		RESOLUTION_RECT,
+		RESOLUTION_PAIR,
+		RESOLUTION_FLOAT,
+		NORMALIZED_RECT,
 		NORMALIZED_PAIR,
 		PATH,
 		STRING,
@@ -135,26 +156,41 @@ public:
 		BOOLEAN
 	};
 
+	bool hasView(const std::string& view);
+
 	// If expectedType is an empty string, will do no type checking.
 	const ThemeElement* getElement(const std::string& view, const std::string& element, const std::string& expectedType) const;
+
+	// Returns the value of a theme variable, or empty string if not defined.
+	std::string getVariable(const std::string& name) const;
 
 	static std::vector<GuiComponent*> makeExtras(const std::shared_ptr<ThemeData>& theme, const std::string& view, Window* window);
 
 	static const std::shared_ptr<ThemeData>& getDefault();
 
 	static std::map<std::string, ThemeSet> getThemeSets();
-	static boost::filesystem::path getThemeFromCurrentSet(const std::string& system);
+	static std::string getThemeFromCurrentSet(const std::string& system);
 
 private:
 	static std::map< std::string, std::map<std::string, ElementPropertyType> > sElementMap;
+	static std::vector<std::string> sSupportedFeatures;
+	static std::vector<std::string> sSupportedViews;
 
-	std::deque<boost::filesystem::path> mPaths;
+	std::deque<std::string> mPaths;
 	float mVersion;
+	Vector2f mResolution;
 
+	void parseFeatures(const pugi::xml_node& themeRoot);
 	void parseIncludes(const pugi::xml_node& themeRoot);
+	void parseVariables(const pugi::xml_node& root);
 	void parseViews(const pugi::xml_node& themeRoot);
 	void parseView(const pugi::xml_node& viewNode, ThemeView& view);
 	void parseElement(const pugi::xml_node& elementNode, const std::map<std::string, ElementPropertyType>& typeMap, ThemeElement& element);
 
 	std::map<std::string, ThemeView> mViews;
+
+	std::string resolvePlaceholders(const char* in);
+	std::map<std::string, std::string> mVariables;
 };
+
+#endif // ES_CORE_THEME_DATA_H
